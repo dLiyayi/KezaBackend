@@ -60,4 +60,17 @@ public class AuthController {
         authUseCase.resetPassword(request);
         return ResponseEntity.ok(ApiResponse.success(null, "Password reset successful"));
     }
+
+    @PostMapping("/send-verification")
+    public ResponseEntity<ApiResponse<Void>> sendEmailVerification(Authentication authentication) {
+        UUID userId = UUID.fromString(authentication.getName());
+        authUseCase.sendEmailVerification(userId);
+        return ResponseEntity.ok(ApiResponse.success(null, "Verification email sent"));
+    }
+
+    @GetMapping("/verify-email")
+    public ResponseEntity<ApiResponse<Void>> verifyEmail(@RequestParam String token) {
+        authUseCase.verifyEmail(token);
+        return ResponseEntity.ok(ApiResponse.success(null, "Email verified successfully"));
+    }
 }

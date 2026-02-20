@@ -40,5 +40,3 @@ logging:
   level:
     com.keza: INFO
     org.springframework: WARN
-  pattern:
-    console: '{"timestamp":"%d{ISO8601}","level":"%p","thread":"%t","logger":"%c","message":"%m","correlationId":"%X{correlationId}"}%n'

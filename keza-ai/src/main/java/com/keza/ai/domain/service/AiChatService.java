@@ -6,6 +6,10 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.model.ChatModel;
+import org.springframework.ai.document.Document;
+import org.springframework.ai.vectorstore.SearchRequest;
+import org.springframework.ai.vectorstore.VectorStore;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 
@@ -15,12 +19,19 @@ import java.util.stream.Collectors;
 
 @Slf4j
 @Service
-@RequiredArgsConstructor
 @ConditionalOnProperty(name = "keza.ai.enabled", havingValue = "true")
 public class AiChatService {
 
     private final ChatModel chatModel;
     private final ChatMessageRepository chatMessageRepository;
+    private final VectorStore vectorStore;
+
+    public AiChatService(ChatModel chatModel, ChatMessageRepository chatMessageRepository,
+                         @Autowired(required = false) VectorStore vectorStore) {
+        this.chatModel = chatModel;
+        this.chatMessageRepository = chatMessageRepository;
+        this.vectorStore = vectorStore;
+    }
 
     private static final String SYSTEM_PROMPT_EN = """
             You are Keza AI, a helpful financial assistant for the Keza equity crowdfunding platform in East Africa.
@@ -47,14 +58,6 @@ public class AiChatService {
             Ne fournissez jamais de conseils financiers specifiques - recommandez toujours de consulter un conseiller financier agree.
             """;
 
-    /**
-     * Sends a message to the AI model with session context and returns the response.
-     *
-     * @param sessionId the chat session ID for context retrieval
-     * @param message   the user's message
-     * @param language  the session language code (en, sw, fr)
-     * @return the AI-generated response text
-     */
     public String chat(UUID sessionId, String message, String language) {
         log.debug("Processing AI chat for session {} with language {}", sessionId, language);
 
@@ -63,26 +66,37 @@ public class AiChatService {
         // Retrieve recent conversation history for context
         List<ChatMessage> recentMessages = chatMessageRepository.findTop20BySessionIdOrderByCreatedAtDesc(sessionId);
 
-        // Build conversation context from history (reverse to chronological order)
         String conversationContext = recentMessages.stream()
                 .sorted((a, b) -> a.getCreatedAt().compareTo(b.getCreatedAt()))
                 .map(msg -> msg.getRole() + ": " + msg.getContent())
                 .collect(Collectors.joining("\n"));
 
-        // Build the full prompt
-        String fullPrompt;
-        if (conversationContext.isEmpty()) {
-            fullPrompt = message;
-        } else {
-            fullPrompt = "Previous conversation:\n" + conversationContext + "\n\nUser: " + message;
+        // RAG: retrieve relevant documents from vector store
+        String ragContext = retrieveRelevantContext(message);
+
+        // Build the full prompt with RAG context
+        StringBuilder fullPrompt = new StringBuilder();
+
+        if (!ragContext.isEmpty()) {
+            fullPrompt.append("Relevant knowledge base information:\n")
+                    .append(ragContext)
+                    .append("\n\n");
         }
+
+        if (!conversationContext.isEmpty()) {
+            fullPrompt.append("Previous conversation:\n")
+                    .append(conversationContext)
+                    .append("\n\n");
+        }
+
+        fullPrompt.append("User: ").append(message);
 
         try {
             ChatClient chatClient = ChatClient.builder(chatModel).build();
 
             String response = chatClient.prompt()
                     .system(systemPrompt)
-                    .user(fullPrompt)
+                    .user(fullPrompt.toString())
                     .call()
                     .content();
 
@@ -91,6 +105,33 @@ public class AiChatService {
         } catch (Exception e) {
             log.error("Error calling AI model for session {}: {}", sessionId, e.getMessage(), e);
             return getErrorResponse(language);
+        }
+    }
+
+    private String retrieveRelevantContext(String query) {
+        if (vectorStore == null) {
+            log.debug("VectorStore not available, skipping RAG retrieval");
+            return "";
+        }
+
+        try {
+            List<Document> documents = vectorStore.similaritySearch(
+                    SearchRequest.builder()
+                            .query(query)
+                            .topK(5)
+                            .similarityThreshold(0.7)
+                            .build());
+
+            if (documents.isEmpty()) {
+                return "";
+            }
+
+            return documents.stream()
+                    .map(Document::getText)
+                    .collect(Collectors.joining("\n---\n"));
+        } catch (Exception e) {
+            log.warn("Error during RAG retrieval: {}", e.getMessage());
+            return "";
         }
     }
 

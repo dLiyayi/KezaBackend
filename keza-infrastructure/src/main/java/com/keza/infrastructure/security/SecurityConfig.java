@@ -41,7 +41,8 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(
             HttpSecurity http,
-            @Autowired(required = false) OncePerRequestFilter jwtAuthenticationFilter) throws Exception {
+            @Autowired(required = false) OncePerRequestFilter jwtAuthenticationFilter,
+            @Autowired(required = false) RateLimitingFilter rateLimitingFilter) throws Exception {
         http
                 .cors(cors -> cors.configurationSource(corsConfigurationSource))
                 .csrf(AbstractHttpConfigurer::disable)
@@ -54,6 +55,10 @@ public class SecurityConfig {
 
         if (jwtAuthenticationFilter != null) {
             http.addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+        }
+
+        if (rateLimitingFilter != null) {
+            http.addFilterAfter(rateLimitingFilter, UsernamePasswordAuthenticationFilter.class);
         }
 
         return http.build();

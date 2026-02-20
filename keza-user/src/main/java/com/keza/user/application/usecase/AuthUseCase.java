@@ -5,6 +5,7 @@ import com.keza.common.exception.DuplicateResourceException;
 import com.keza.common.exception.ResourceNotFoundException;
 import com.keza.common.exception.UnauthorizedException;
 import com.keza.user.application.dto.*;
+import com.keza.user.domain.event.EmailVerificationRequestedEvent;
 import com.keza.user.domain.event.UserRegisteredEvent;
 import com.keza.user.domain.model.User;
 import com.keza.user.domain.model.UserRole;
@@ -38,6 +39,7 @@ public class AuthUseCase {
     private final RedisTemplate<String, Object> redisTemplate;
 
     private static final String PASSWORD_RESET_PREFIX = "password_reset:";
+    private static final String EMAIL_VERIFICATION_PREFIX = "email_verification:";
 
     @Transactional
     public AuthResponse register(RegisterUserRequest request) {
@@ -145,6 +147,44 @@ public class AuthUseCase {
         jwtService.revokeRefreshToken(user.getId());
 
         log.info("Password reset for user: {}", user.getEmail());
+    }
+
+    @Transactional
+    public void sendEmailVerification(UUID userId) {
+        User user = userRepository.findByIdAndDeletedFalse(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User", userId));
+
+        if (user.isEmailVerified()) {
+            throw new BusinessRuleException("ALREADY_VERIFIED", "Email is already verified");
+        }
+
+        String token = UUID.randomUUID().toString();
+        redisTemplate.opsForValue().set(
+                EMAIL_VERIFICATION_PREFIX + token, userId.toString(),
+                24, TimeUnit.HOURS);
+
+        // Publish event for notification module to send the email
+        eventPublisher.publishEvent(new EmailVerificationRequestedEvent(
+                userId, user.getEmail(), user.getFirstName(), token));
+
+        log.info("Email verification token generated for user: {}", user.getEmail());
+    }
+
+    @Transactional
+    public void verifyEmail(String token) {
+        String userId = (String) redisTemplate.opsForValue().get(EMAIL_VERIFICATION_PREFIX + token);
+        if (userId == null) {
+            throw new BusinessRuleException("INVALID_TOKEN", "Invalid or expired verification token");
+        }
+
+        User user = userRepository.findByIdAndDeletedFalse(UUID.fromString(userId))
+                .orElseThrow(() -> new ResourceNotFoundException("User", "id", userId));
+
+        user.setEmailVerified(true);
+        userRepository.save(user);
+        redisTemplate.delete(EMAIL_VERIFICATION_PREFIX + token);
+
+        log.info("Email verified for user: {}", user.getEmail());
     }
 
     private AuthResponse buildAuthResponse(User user) {
