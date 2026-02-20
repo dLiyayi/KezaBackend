@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Investment Confirmed</title>
+</head>
+<body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f4f4f4;">
+    <div style="background-color: #1a5632; padding: 20px; text-align: center; border-radius: 8px 8px 0 0;">
+        <h1 style="color: #ffffff; margin: 0;">Investment Confirmed</h1>
+    </div>
+    <div style="background-color: #ffffff; padding: 30px; border-radius: 0 0 8px 8px;">
+        <p>Hello <span th:text="${firstName}">User</span>,</p>
+        <p>Your investment has been successfully confirmed! Here are the details:</p>
+
+        <table style="width: 100%; background-color: #f9f9f9; border-radius: 5px; padding: 5px; margin: 20px 0; border-collapse: collapse;">
+            <tr>
+                <td style="padding: 12px 15px; color: #666666; border-bottom: 1px solid #eeeeee;">Campaign:</td>
+                <td style="padding: 12px 15px; font-weight: bold; border-bottom: 1px solid #eeeeee;" th:text="${campaignName}">Campaign Name</td>
+            </tr>
+            <tr>
+                <td style="padding: 12px 15px; color: #666666; border-bottom: 1px solid #eeeeee;">Amount:</td>
+                <td style="padding: 12px 15px; font-weight: bold; border-bottom: 1px solid #eeeeee;">
+                    <span th:text="${currency}">KES</span> <span th:text="${amount}">0</span>
+                </td>
+            </tr>
+            <tr>
+                <td style="padding: 12px 15px; color: #666666;">Date:</td>
+                <td style="padding: 12px 15px; font-weight: bold;" th:text="${investmentDate}">2026-01-01</td>
+            </tr>
+        </table>
+
+        <div style="background-color: #e8f5e9; border-left: 4px solid #1a5632; padding: 15px; margin: 20px 0; border-radius: 0 5px 5px 0;">
+            <p style="margin: 0; color: #1a5632;">
+                <strong>What happens next?</strong><br>
+                Your investment is now recorded. You can track the campaign's progress and your returns from your dashboard.
+            </p>
+        </div>
+
+        <div style="text-align: center; margin: 30px 0;">
+            <a th:href="${investmentsUrl}" href="https://keza.com/investments"
+               style="background-color: #1a5632; color: white; padding: 14px 35px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block;">
+                View Your Investments
+            </a>
+        </div>
+
+        <p>Thank you for investing with Keza. Together, we're building the future of East African enterprise.</p>
+        <p>Best regards,<br><strong>The Keza Team</strong></p>
+    </div>
+    <div style="text-align: center; padding: 15px; color: #888888; font-size: 12px;">
+        <p>&copy; 2026 Keza. All rights reserved.</p>
+        <p>This is a transaction confirmation. Please keep this for your records.</p>
+    </div>
+</body>
+</html>

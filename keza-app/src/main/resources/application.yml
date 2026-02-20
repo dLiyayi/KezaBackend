@@ -1,0 +1,95 @@
+spring:
+  application:
+    name: keza-backend
+  profiles:
+    active: dev
+
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: true
+        jdbc:
+          time_zone: UTC
+
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    baseline-on-migrate: true
+
+  jackson:
+    property-naming-strategy: SNAKE_CASE
+    serialization:
+      write-dates-as-timestamps: false
+    deserialization:
+      fail-on-unknown-properties: false
+    default-property-inclusion: non_null
+
+server:
+  port: 8080
+  servlet:
+    context-path: /
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      show-details: when-authorized
+
+keza:
+  ai:
+    enabled: false
+  jwt:
+    secret: ${JWT_SECRET:keza-dev-secret-key-change-in-production-must-be-at-least-256-bits-long}
+    access-token-expiration: 900000     # 15 minutes
+    refresh-token-expiration: 604800000 # 7 days
+  storage:
+    endpoint: ${MINIO_ENDPOINT:http://localhost:9000}
+    access-key: ${MINIO_ACCESS_KEY:keza_minio}
+    secret-key: ${MINIO_SECRET_KEY:keza_minio_password}
+    region: us-east-1
+    buckets:
+      kyc-documents: keza-kyc-documents
+      campaign-media: keza-campaign-media
+      due-diligence: keza-due-diligence
+  mpesa:
+    consumer-key: ${MPESA_CONSUMER_KEY:your-consumer-key}
+    consumer-secret: ${MPESA_CONSUMER_SECRET:your-consumer-secret}
+    passkey: ${MPESA_PASSKEY:your-passkey}
+    shortcode: ${MPESA_SHORTCODE:174379}
+    callback-url: ${MPESA_CALLBACK_URL:https://your-domain.com}
+    base-url: ${MPESA_BASE_URL:https://sandbox.safaricom.co.ke}
+  card:
+    flutterwave-base-url: ${FLUTTERWAVE_BASE_URL:https://api.flutterwave.com/v3}
+    callback-url: ${CARD_CALLBACK_URL:http://localhost:8080/api/v1/payments/callbacks/card}
+  kcb:
+    account-name: ${KCB_ACCOUNT_NAME:Keza Platform Limited}
+    account-number: ${KCB_ACCOUNT_NUMBER:1234567890}
+    branch: ${KCB_BRANCH:Nairobi Main}
+    bank-code: ${KCB_BANK_CODE:01}
+
+# Resilience4j configuration for payment gateways
+resilience4j:
+  circuitbreaker:
+    instances:
+      mpesa:
+        register-health-indicator: true
+        sliding-window-size: 10
+        minimum-number-of-calls: 5
+        failure-rate-threshold: 50
+        wait-duration-in-open-state: 30s
+        permitted-number-of-calls-in-half-open-state: 3
+        sliding-window-type: COUNT_BASED
+  retry:
+    instances:
+      mpesa:
+        max-attempts: 3
+        wait-duration: 2s
+        enable-exponential-backoff: true
+        exponential-backoff-multiplier: 2

@@ -1,0 +1,103 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: keza-backend
+  labels:
+    app: keza-backend
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: keza-backend
+  template:
+    metadata:
+      labels:
+        app: keza-backend
+    spec:
+      containers:
+        - name: keza-backend
+          image: keza/keza-backend:latest
+          ports:
+            - containerPort: 8080
+          envFrom:
+            - configMapRef:
+                name: keza-config
+            - secretRef:
+                name: keza-secrets
+          livenessProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: 8080
+            initialDelaySeconds: 60
+            periodSeconds: 15
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /actuator/health/readiness
+              port: 8080
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            failureThreshold: 3
+          resources:
+            requests:
+              memory: "512Mi"
+              cpu: "250m"
+            limits:
+              memory: "1Gi"
+              cpu: "1000m"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: keza-backend
+spec:
+  type: ClusterIP
+  selector:
+    app: keza-backend
+  ports:
+    - port: 80
+      targetPort: 8080
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: keza-backend-hpa
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: keza-backend
+  minReplicas: 2
+  maxReplicas: 10
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: 80
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: keza-config
+data:
+  SPRING_PROFILES_ACTIVE: "prod"
+  SERVER_PORT: "8080"
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: keza-secrets
+type: Opaque
+stringData:
+  SPRING_DATASOURCE_URL: "jdbc:postgresql://postgres:5432/keza"
+  SPRING_DATASOURCE_USERNAME: "keza"
+  SPRING_DATASOURCE_PASSWORD: "changeme"
+  JWT_SECRET: "changeme-must-be-at-least-256-bits"

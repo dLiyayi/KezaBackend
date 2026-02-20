@@ -1,0 +1,29 @@
+spring:
+  datasource:
+    url: jdbc:tc:postgresql:17-alpine:///keza_test
+    driver-class-name: org.testcontainers.jdbc.ContainerDatabaseDriver
+
+  data:
+    redis:
+      host: localhost
+      port: 6379
+
+  rabbitmq:
+    host: localhost
+    port: 5672
+
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: true
+
+  flyway:
+    enabled: false
+
+keza:
+  ai:
+    enabled: false
+
+logging:
+  level:
+    com.keza: DEBUG

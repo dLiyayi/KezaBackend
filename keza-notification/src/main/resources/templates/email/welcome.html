@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Welcome to Keza</title>
+</head>
+<body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f4f4f4;">
+    <div style="background-color: #1a5632; padding: 20px; text-align: center; border-radius: 8px 8px 0 0;">
+        <h1 style="color: #ffffff; margin: 0;">Welcome to Keza!</h1>
+    </div>
+    <div style="background-color: #ffffff; padding: 30px; border-radius: 0 0 8px 8px;">
+        <p>Hello <span th:text="${firstName}">User</span>,</p>
+        <p>Thank you for joining <strong>Keza</strong>, East Africa's premier equity crowdfunding platform.</p>
+        <p>We're excited to have you on board! Here's what you can do next:</p>
+        <ul>
+            <li><strong>Complete your KYC verification</strong> to unlock investment features</li>
+            <li><strong>Browse campaigns</strong> and discover exciting investment opportunities</li>
+            <li><strong>Set up your profile</strong> and notification preferences</li>
+        </ul>
+        <div style="text-align: center; margin: 30px 0;">
+            <a th:href="${dashboardUrl}" href="https://keza.com/dashboard"
+               style="background-color: #1a5632; color: white; padding: 14px 35px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block;">
+                Go to Dashboard
+            </a>
+        </div>
+        <p>If you have any questions, feel free to reach out to our support team at
+            <a href="mailto:support@keza.com" style="color: #1a5632;">support@keza.com</a>.</p>
+        <p>Best regards,<br><strong>The Keza Team</strong></p>
+    </div>
+    <div style="text-align: center; padding: 15px; color: #888888; font-size: 12px;">
+        <p>&copy; 2026 Keza. All rights reserved.</p>
+        <p>You received this email because you created an account on Keza.</p>
+    </div>
+</body>
+</html>

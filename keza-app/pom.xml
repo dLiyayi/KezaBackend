@@ -1,0 +1,115 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>com.keza</groupId>
+        <artifactId>keza-backend</artifactId>
+        <version>0.1.0-SNAPSHOT</version>
+    </parent>
+
+    <artifactId>keza-app</artifactId>
+    <name>Keza App</name>
+    <description>Spring Boot main application - assembles all modules</description>
+
+    <dependencies>
+        <dependency>
+            <groupId>com.keza</groupId>
+            <artifactId>keza-common</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.keza</groupId>
+            <artifactId>keza-infrastructure</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.keza</groupId>
+            <artifactId>keza-user</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.keza</groupId>
+            <artifactId>keza-campaign</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.keza</groupId>
+            <artifactId>keza-investment</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.keza</groupId>
+            <artifactId>keza-payment</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.keza</groupId>
+            <artifactId>keza-ai</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.keza</groupId>
+            <artifactId>keza-marketplace</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.keza</groupId>
+            <artifactId>keza-notification</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.keza</groupId>
+            <artifactId>keza-admin</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-actuator</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.postgresql</groupId>
+            <artifactId>postgresql</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.flywaydb</groupId>
+            <artifactId>flyway-core</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.flywaydb</groupId>
+            <artifactId>flyway-database-postgresql</artifactId>
+        </dependency>
+
+        <!-- Test dependencies -->
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>postgresql</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-testcontainers</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>rabbitmq</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+                <configuration>
+                    <excludes>
+                        <exclude>
+                            <groupId>org.projectlombok</groupId>
+                            <artifactId>lombok</artifactId>
+                        </exclude>
+                    </excludes>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+</project>
