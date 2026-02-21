@@ -1,9 +1,14 @@
 package com.keza.ai.domain.service;
 
-import lombok.RequiredArgsConstructor;
+import com.keza.ai.domain.port.out.RiskDataPort;
+import com.keza.ai.domain.port.out.RiskDataPort.CampaignRiskData;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.ai.chat.client.ChatClient;
+import org.springframework.ai.chat.model.ChatModel;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -12,10 +17,12 @@ import java.util.UUID;
  * Service for calculating risk scores for investment campaigns.
  * Uses a weighted scoring model across multiple dimensions to produce
  * a risk score between 1 (very low risk) and 10 (very high risk).
+ *
+ * <p>Scoring approach: 60% rule-based analysis + 40% LLM qualitative analysis
+ * (when AI is enabled). Falls back to 100% rule-based when LLM is unavailable.</p>
  */
 @Slf4j
 @Service
-@RequiredArgsConstructor
 public class RiskScoringService {
 
     // Weight factors for each scoring dimension
@@ -25,6 +32,24 @@ public class RiskScoringService {
     private static final double WEIGHT_MARKET_POTENTIAL = 0.15;
     private static final double WEIGHT_REGULATORY_COMPLIANCE = 0.15;
     private static final double WEIGHT_COMMUNITY_TRUST = 0.10;
+
+    // Blending weights for rule-based vs LLM scoring
+    private static final double RULE_BASED_WEIGHT = 0.6;
+    private static final double LLM_WEIGHT = 0.4;
+
+    // Kenyan Shilling thresholds for target amount reasonableness
+    private static final BigDecimal MIN_REASONABLE_TARGET = new BigDecimal("100000");    // KES 100K
+    private static final BigDecimal MAX_REASONABLE_TARGET = new BigDecimal("100000000"); // KES 100M
+
+    private final RiskDataPort riskDataPort;
+    private final ChatModel chatModel;
+
+    @Autowired
+    public RiskScoringService(RiskDataPort riskDataPort,
+                              @Autowired(required = false) ChatModel chatModel) {
+        this.riskDataPort = riskDataPort;
+        this.chatModel = chatModel;
+    }
 
     /**
      * Calculates a comprehensive risk score for a campaign.
@@ -36,70 +61,391 @@ public class RiskScoringService {
     public RiskScoreResult calculateRiskScore(UUID campaignId) {
         log.info("Calculating risk score for campaign: {}", campaignId);
 
-        // In a full implementation, each scorer would query real data.
-        // For now, we demonstrate the weighted scoring structure with placeholder scoring.
+        CampaignRiskData data = riskDataPort.getCampaignData(campaignId);
 
-        double campaignCompletenessScore = scoreCampaignCompleteness(campaignId);
-        double founderCredibilityScore = scoreFounderCredibility(campaignId);
-        double financialHealthScore = scoreFinancialHealth(campaignId);
-        double marketPotentialScore = scoreMarketPotential(campaignId);
-        double regulatoryComplianceScore = scoreRegulatoryCompliance(campaignId);
-        double communityTrustScore = scoreCommunityTrust(campaignId);
+        // Rule-based scoring for each dimension
+        double campaignCompletenessScore = scoreCampaignCompleteness(data);
+        double founderCredibilityScore = scoreFounderCredibility(data);
+        double financialHealthScore = scoreFinancialHealth(data);
+        double marketPotentialScore = scoreMarketPotential(data);
+        double regulatoryComplianceScore = scoreRegulatoryCompliance(data);
+        double communityTrustScore = scoreCommunityTrust(data);
 
-        // Weighted average
-        double rawScore = (campaignCompletenessScore * WEIGHT_CAMPAIGN_COMPLETENESS)
+        // Weighted average of rule-based scores
+        double ruleBasedScore = (campaignCompletenessScore * WEIGHT_CAMPAIGN_COMPLETENESS)
                 + (founderCredibilityScore * WEIGHT_FOUNDER_CREDIBILITY)
                 + (financialHealthScore * WEIGHT_FINANCIAL_HEALTH)
                 + (marketPotentialScore * WEIGHT_MARKET_POTENTIAL)
                 + (regulatoryComplianceScore * WEIGHT_REGULATORY_COMPLIANCE)
                 + (communityTrustScore * WEIGHT_COMMUNITY_TRUST);
 
-        // Clamp to 1-10 range
-        int score = (int) Math.round(Math.max(1, Math.min(10, rawScore)));
-
-        String riskLevel = determineRiskLevel(score);
         List<String> strengths = identifyStrengths(campaignCompletenessScore, founderCredibilityScore,
                 financialHealthScore, marketPotentialScore, regulatoryComplianceScore, communityTrustScore);
         List<String> risks = identifyRisks(campaignCompletenessScore, founderCredibilityScore,
                 financialHealthScore, marketPotentialScore, regulatoryComplianceScore, communityTrustScore);
+
+        // Attempt LLM-enhanced scoring if ChatModel is available
+        double finalScore;
+        if (chatModel != null) {
+            finalScore = blendWithLlmScore(data, ruleBasedScore, strengths, risks);
+        } else {
+            log.debug("ChatModel not available, using 100% rule-based scoring");
+            finalScore = ruleBasedScore;
+        }
+
+        // Clamp to 1-10 range
+        int score = (int) Math.round(Math.max(1, Math.min(10, finalScore)));
+
+        String riskLevel = determineRiskLevel(score);
         String recommendation = generateRecommendation(score, riskLevel);
 
-        log.info("Risk score for campaign {}: {} ({})", campaignId, score, riskLevel);
+        log.info("Risk score for campaign {}: {} ({}) [rule-based={}, llm={}]",
+                campaignId, score, riskLevel,
+                String.format("%.2f", ruleBasedScore),
+                chatModel != null ? "enabled" : "disabled");
 
         return new RiskScoreResult(score, riskLevel, strengths, risks, recommendation);
     }
 
-    // ---- Scoring dimensions (placeholders for real data integration) ----
+    // ---- Scoring dimensions ----
 
-    private double scoreCampaignCompleteness(UUID campaignId) {
-        // Check: description length, images, financial projections, team info, milestones
-        // Placeholder: returns a moderate score
-        return 5.0;
+    /**
+     * Scores campaign completeness (weight 0.15).
+     * Checks how thoroughly the campaign listing has been filled out.
+     */
+    double scoreCampaignCompleteness(CampaignRiskData data) {
+        double score = 10.0;
+
+        if (data.description() != null && data.description().length() > 100) {
+            score -= 1;
+        }
+        if (data.hasFinancialProjections()) {
+            score -= 2;
+        }
+        if (data.hasRiskFactors()) {
+            score -= 1;
+        }
+        if (data.hasUseOfFunds()) {
+            score -= 1;
+        }
+        if (data.hasTeamMembers()) {
+            score -= 2;
+        }
+        if (data.hasPitchVideo()) {
+            score -= 1;
+        }
+        if (data.mediaCount() >= 3) {
+            score -= 1;
+        }
+        if (data.wizardStep() >= 6) {
+            score -= 1;
+        }
+
+        return Math.max(1.0, score);
     }
 
-    private double scoreFounderCredibility(UUID campaignId) {
-        // Check: KYC verified, previous campaigns, social proof, LinkedIn, track record
-        return 5.0;
+    /**
+     * Scores founder/issuer credibility (weight 0.20).
+     * Evaluates the trustworthiness and track record of the campaign creator.
+     */
+    double scoreFounderCredibility(CampaignRiskData data) {
+        double score = 10.0;
+
+        if (data.issuerKycApproved()) {
+            score -= 3;
+        }
+        if (data.companyRegistrationNumber() != null && !data.companyRegistrationNumber().isBlank()) {
+            score -= 2;
+        }
+        if (data.companyWebsite() != null && !data.companyWebsite().isBlank()) {
+            score -= 1;
+        }
+        if (data.issuerPreviousCampaigns() > 0) {
+            score -= 2;
+        }
+
+        return Math.max(1.0, score);
     }
 
-    private double scoreFinancialHealth(UUID campaignId) {
-        // Check: revenue data, burn rate, valuation reasonableness, use of funds clarity
-        return 5.0;
+    /**
+     * Scores financial health and viability (weight 0.25).
+     * The most heavily weighted dimension, examining financial indicators.
+     */
+    double scoreFinancialHealth(CampaignRiskData data) {
+        double score = 10.0;
+
+        // Target amount reasonableness (KES 100K - 100M)
+        if (data.targetAmount() != null
+                && data.targetAmount().compareTo(MIN_REASONABLE_TARGET) >= 0
+                && data.targetAmount().compareTo(MAX_REASONABLE_TARGET) <= 0) {
+            score -= 2;
+        }
+
+        if (data.hasFinancialProjections()) {
+            score -= 3;
+        }
+        if (data.hasUseOfFunds()) {
+            score -= 2;
+        }
+
+        // Funding progress > 20%
+        if (hasFundingProgress(data, 0.20)) {
+            score -= 1;
+        }
+
+        // Investor count > 10 shows validation
+        if (data.investorCount() > 10) {
+            score -= 1;
+        }
+
+        return Math.max(1.0, score);
     }
 
-    private double scoreMarketPotential(UUID campaignId) {
-        // Check: market size, competition analysis, traction metrics, growth rate
-        return 5.0;
+    /**
+     * Scores market potential and traction (weight 0.15).
+     */
+    double scoreMarketPotential(CampaignRiskData data) {
+        double score = 10.0;
+
+        if (data.industry() != null && !data.industry().isBlank()) {
+            score -= 2;
+        }
+        if (data.description() != null && data.description().length() > 500) {
+            score -= 2;
+        }
+        if (data.companyWebsite() != null && !data.companyWebsite().isBlank()) {
+            score -= 1;
+        }
+        if (data.investorCount() > 20) {
+            score -= 2;
+        }
+        if (data.updateCount() > 0) {
+            score -= 1;
+        }
+
+        return Math.max(1.0, score);
     }
 
-    private double scoreRegulatoryCompliance(UUID campaignId) {
-        // Check: business registration, tax compliance, required licenses, legal structure
-        return 5.0;
+    /**
+     * Scores regulatory compliance posture (weight 0.15).
+     */
+    double scoreRegulatoryCompliance(CampaignRiskData data) {
+        double score = 10.0;
+
+        if (data.companyRegistrationNumber() != null && !data.companyRegistrationNumber().isBlank()) {
+            score -= 3;
+        }
+        if (data.companyAddress() != null && !data.companyAddress().isBlank()) {
+            score -= 2;
+        }
+        if (data.issuerKycApproved()) {
+            score -= 2;
+        }
+        if (data.hasRiskFactors()) {
+            score -= 1;
+        }
+
+        return Math.max(1.0, score);
     }
 
-    private double scoreCommunityTrust(UUID campaignId) {
-        // Check: investor count, social shares, comments, repeat investors
-        return 5.0;
+    /**
+     * Scores community trust and social proof (weight 0.10).
+     */
+    double scoreCommunityTrust(CampaignRiskData data) {
+        double score = 10.0;
+
+        // Tiered investor count scoring
+        if (data.investorCount() > 50) {
+            score -= 3;
+        } else if (data.investorCount() > 20) {
+            score -= 2;
+        } else if (data.investorCount() > 5) {
+            score -= 1;
+        }
+
+        if (data.updateCount() > 0) {
+            score -= 2;
+        }
+        if (data.mediaCount() > 0) {
+            score -= 1;
+        }
+
+        // Funding progress > 30%
+        if (hasFundingProgress(data, 0.30)) {
+            score -= 2;
+        }
+
+        return Math.max(1.0, score);
+    }
+
+    // ---- LLM integration ----
+
+    /**
+     * Blends the rule-based score with an LLM qualitative assessment.
+     * Final score = 60% rule-based + 40% LLM score.
+     * If LLM call fails, falls back to 100% rule-based.
+     */
+    private double blendWithLlmScore(CampaignRiskData data, double ruleBasedScore,
+                                     List<String> strengths, List<String> risks) {
+        try {
+            String prompt = buildLlmPrompt(data, ruleBasedScore);
+
+            ChatClient chatClient = ChatClient.builder(chatModel).build();
+            String response = chatClient.prompt()
+                    .user(prompt)
+                    .call()
+                    .content();
+
+            log.debug("LLM risk assessment response: {}", response);
+
+            double llmScore = parseLlmScore(response);
+            double blendedScore = (RULE_BASED_WEIGHT * ruleBasedScore) + (LLM_WEIGHT * llmScore);
+
+            // Extract LLM insights and add to strengths/risks
+            extractLlmInsights(response, strengths, risks);
+
+            log.info("Blended score: rule-based={}, llm={}, final={}",
+                    String.format("%.2f", ruleBasedScore),
+                    String.format("%.2f", llmScore),
+                    String.format("%.2f", blendedScore));
+
+            return blendedScore;
+        } catch (Exception e) {
+            log.warn("LLM risk scoring failed, falling back to rule-based only: {}", e.getMessage());
+            return ruleBasedScore;
+        }
+    }
+
+    private String buildLlmPrompt(CampaignRiskData data, double ruleBasedScore) {
+        return """
+                You are a risk assessment analyst for a crowdfunding platform in Kenya.
+                Evaluate the following campaign and provide a risk score from 1 (very low risk) to 10 (very high risk).
+
+                Campaign Summary:
+                - Title: %s
+                - Industry: %s
+                - Company: %s
+                - Company Registration: %s
+                - Company Website: %s
+                - Target Amount: KES %s
+                - Raised Amount: KES %s
+                - Investor Count: %d
+                - Has Financial Projections: %s
+                - Has Risk Factors Disclosed: %s
+                - Has Use of Funds: %s
+                - Has Team Members: %s
+                - Has Pitch Video: %s
+                - Media Count: %d
+                - Updates Posted: %d
+                - Issuer KYC Approved: %s
+                - Issuer Previous Campaigns: %d
+                - Description Length: %d characters
+                - Wizard Completion Step: %d/6
+
+                Our rule-based analysis produced a score of %.1f/10.
+
+                Respond in this exact format:
+                SCORE: [number 1-10]
+                STRENGTHS: [comma-separated list of 1-3 key strengths]
+                RISKS: [comma-separated list of 1-3 key risks]
+                SUMMARY: [one sentence overall assessment]
+                """.formatted(
+                nullSafe(data.title()),
+                nullSafe(data.industry()),
+                nullSafe(data.companyName()),
+                data.companyRegistrationNumber() != null ? "Yes" : "No",
+                data.companyWebsite() != null ? "Yes" : "No",
+                data.targetAmount() != null ? data.targetAmount().toPlainString() : "N/A",
+                data.raisedAmount() != null ? data.raisedAmount().toPlainString() : "0",
+                data.investorCount(),
+                data.hasFinancialProjections(),
+                data.hasRiskFactors(),
+                data.hasUseOfFunds(),
+                data.hasTeamMembers(),
+                data.hasPitchVideo(),
+                data.mediaCount(),
+                data.updateCount(),
+                data.issuerKycApproved(),
+                data.issuerPreviousCampaigns(),
+                data.description() != null ? data.description().length() : 0,
+                data.wizardStep(),
+                ruleBasedScore
+        );
+    }
+
+    private double parseLlmScore(String response) {
+        try {
+            for (String line : response.split("\n")) {
+                String trimmed = line.trim();
+                if (trimmed.toUpperCase().startsWith("SCORE:")) {
+                    String scoreStr = trimmed.substring(6).trim();
+                    // Extract first number found
+                    StringBuilder num = new StringBuilder();
+                    for (char c : scoreStr.toCharArray()) {
+                        if (Character.isDigit(c) || c == '.') {
+                            num.append(c);
+                        } else if (!num.isEmpty()) {
+                            break;
+                        }
+                    }
+                    if (!num.isEmpty()) {
+                        double score = Double.parseDouble(num.toString());
+                        return Math.max(1.0, Math.min(10.0, score));
+                    }
+                }
+            }
+        } catch (Exception e) {
+            log.warn("Could not parse LLM score from response: {}", e.getMessage());
+        }
+        return 5.0; // Default to moderate if parsing fails
+    }
+
+    private void extractLlmInsights(String response, List<String> strengths, List<String> risks) {
+        try {
+            for (String line : response.split("\n")) {
+                String trimmed = line.trim();
+                if (trimmed.toUpperCase().startsWith("STRENGTHS:")) {
+                    String insightsStr = trimmed.substring(10).trim();
+                    if (!insightsStr.isBlank()) {
+                        for (String insight : insightsStr.split(",")) {
+                            String clean = insight.trim();
+                            if (!clean.isEmpty()) {
+                                strengths.add("[AI] " + clean);
+                            }
+                        }
+                    }
+                } else if (trimmed.toUpperCase().startsWith("RISKS:")) {
+                    String insightsStr = trimmed.substring(6).trim();
+                    if (!insightsStr.isBlank()) {
+                        for (String insight : insightsStr.split(",")) {
+                            String clean = insight.trim();
+                            if (!clean.isEmpty()) {
+                                risks.add("[AI] " + clean);
+                            }
+                        }
+                    }
+                }
+            }
+        } catch (Exception e) {
+            log.warn("Could not extract LLM insights: {}", e.getMessage());
+        }
+    }
+
+    // ---- Utility methods ----
+
+    private boolean hasFundingProgress(CampaignRiskData data, double threshold) {
+        if (data.targetAmount() == null || data.targetAmount().compareTo(BigDecimal.ZERO) == 0) {
+            return false;
+        }
+        if (data.raisedAmount() == null) {
+            return false;
+        }
+        double progress = data.raisedAmount().doubleValue() / data.targetAmount().doubleValue();
+        return progress > threshold;
+    }
+
+    private String nullSafe(String value) {
+        return value != null ? value : "N/A";
     }
 
     // ---- Analysis helpers ----
