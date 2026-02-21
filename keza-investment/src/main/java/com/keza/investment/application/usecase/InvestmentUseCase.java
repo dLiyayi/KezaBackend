@@ -197,6 +197,28 @@ public class InvestmentUseCase {
         return mapToResponse(investment);
     }
 
+    @Transactional
+    public InvestmentResponse refundInvestment(UUID investmentId) {
+        log.info("Refunding investment {}", investmentId);
+
+        Investment investment = investmentRepository.findById(investmentId)
+                .orElseThrow(() -> new ResourceNotFoundException("Investment", investmentId));
+
+        if (investment.getStatus() == InvestmentStatus.REFUNDED
+                || investment.getStatus() == InvestmentStatus.CANCELLED) {
+            throw new BusinessRuleException("INVALID_STATUS",
+                    "Investment cannot be refunded from status: " + investment.getStatus());
+        }
+
+        investment.setStatus(InvestmentStatus.REFUNDED);
+        investment.setCancelledAt(Instant.now());
+        investment.setCancellationReason("Payment refunded");
+        investment = investmentRepository.save(investment);
+
+        log.info("Investment {} refunded successfully", investmentId);
+        return mapToResponse(investment);
+    }
+
     @Transactional(readOnly = true)
     public InvestmentResponse getInvestment(UUID id) {
         Investment investment = investmentRepository.findById(id)

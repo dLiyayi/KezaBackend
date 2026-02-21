@@ -6,6 +6,7 @@ import com.keza.common.exception.ResourceNotFoundException;
 import com.keza.common.exception.UnauthorizedException;
 import com.keza.user.application.dto.*;
 import com.keza.user.domain.event.EmailVerificationRequestedEvent;
+import com.keza.user.domain.event.PasswordResetRequestedEvent;
 import com.keza.user.domain.event.UserRegisteredEvent;
 import com.keza.user.domain.model.User;
 import com.keza.user.domain.model.UserRole;
@@ -126,7 +127,8 @@ public class AuthUseCase {
             redisTemplate.opsForValue().set(
                     PASSWORD_RESET_PREFIX + token, user.getId().toString(),
                     1, TimeUnit.HOURS);
-            // TODO: send email with reset link
+            eventPublisher.publishEvent(new PasswordResetRequestedEvent(
+                    user.getId(), user.getEmail(), user.getFirstName(), token));
             log.info("Password reset token generated for user: {}", user.getEmail());
         });
     }

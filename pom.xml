@@ -46,7 +46,7 @@
         <bucket4j.version>8.10.1</bucket4j.version>
         <springdoc.version>2.8.4</springdoc.version>
         <sendgrid.version>4.10.3</sendgrid.version>
-        <africastalking.version>3.5.3</africastalking.version>
+        <africastalking.version>v3.5.3</africastalking.version>
 
         <!-- Plugin versions -->
         <jacoco.version>0.8.13</jacoco.version>
@@ -186,7 +186,7 @@
 
             <!-- Africa's Talking -->
             <dependency>
-                <groupId>com.africastalking</groupId>
+                <groupId>com.github.AfricasTalkingLtd.africastalking-java</groupId>
                 <artifactId>core</artifactId>
                 <version>${africastalking.version}</version>
             </dependency>
@@ -206,6 +206,13 @@
             <scope>test</scope>
         </dependency>
     </dependencies>
+
+    <repositories>
+        <repository>
+            <id>jitpack.io</id>
+            <url>https://jitpack.io</url>
+        </repository>
+    </repositories>
 
     <build>
         <pluginManagement>

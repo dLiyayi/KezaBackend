@@ -26,6 +26,8 @@ public class RabbitMQConfig {
     public static final String PAYMENT_CALLBACK_QUEUE = "keza.payment-callback.queue";
     public static final String AI_PROCESSING_QUEUE = "keza.ai-processing.queue";
     public static final String DUE_DILIGENCE_QUEUE = "keza.due-diligence.queue";
+    public static final String INVESTMENT_PAYMENT_QUEUE = "keza.investment-payment.queue";
+    public static final String NOTIFICATION_PAYMENT_QUEUE = "keza.notification-payment.queue";
 
     // DLQ Queues
     public static final String NOTIFICATION_DLQ = "keza.notification.dlq";
@@ -33,6 +35,8 @@ public class RabbitMQConfig {
     public static final String PAYMENT_CALLBACK_DLQ = "keza.payment-callback.dlq";
     public static final String AI_PROCESSING_DLQ = "keza.ai-processing.dlq";
     public static final String DUE_DILIGENCE_DLQ = "keza.due-diligence.dlq";
+    public static final String INVESTMENT_PAYMENT_DLQ = "keza.investment-payment.dlq";
+    public static final String NOTIFICATION_PAYMENT_DLQ = "keza.notification-payment.dlq";
 
     // Routing Keys
     public static final String NOTIFICATION_ROUTING_KEY = "notification";
@@ -113,6 +117,22 @@ public class RabbitMQConfig {
                 .build();
     }
 
+    @Bean
+    public Queue investmentPaymentQueue() {
+        return QueueBuilder.durable(INVESTMENT_PAYMENT_QUEUE)
+                .withArgument("x-dead-letter-exchange", DLX_EXCHANGE)
+                .withArgument("x-dead-letter-routing-key", INVESTMENT_PAYMENT_DLQ)
+                .build();
+    }
+
+    @Bean
+    public Queue notificationPaymentQueue() {
+        return QueueBuilder.durable(NOTIFICATION_PAYMENT_QUEUE)
+                .withArgument("x-dead-letter-exchange", DLX_EXCHANGE)
+                .withArgument("x-dead-letter-routing-key", NOTIFICATION_PAYMENT_DLQ)
+                .build();
+    }
+
     // --- DLQ Queues ---
     @Bean
     public Queue notificationDlq() {
@@ -137,6 +157,16 @@ public class RabbitMQConfig {
     @Bean
     public Queue dueDiligenceDlq() {
         return QueueBuilder.durable(DUE_DILIGENCE_DLQ).build();
+    }
+
+    @Bean
+    public Queue investmentPaymentDlq() {
+        return QueueBuilder.durable(INVESTMENT_PAYMENT_DLQ).build();
+    }
+
+    @Bean
+    public Queue notificationPaymentDlq() {
+        return QueueBuilder.durable(NOTIFICATION_PAYMENT_DLQ).build();
     }
 
     // --- Bindings ---
@@ -165,6 +195,16 @@ public class RabbitMQConfig {
         return BindingBuilder.bind(dueDiligenceQueue()).to(dueDiligenceExchange()).with(DUE_DILIGENCE_ROUTING_KEY);
     }
 
+    @Bean
+    public Binding investmentPaymentBinding() {
+        return BindingBuilder.bind(investmentPaymentQueue()).to(paymentExchange()).with(PAYMENT_ROUTING_KEY);
+    }
+
+    @Bean
+    public Binding notificationPaymentBinding() {
+        return BindingBuilder.bind(notificationPaymentQueue()).to(paymentExchange()).with(PAYMENT_ROUTING_KEY);
+    }
+
     // --- DLQ Bindings ---
     @Bean
     public Binding notificationDlqBinding() {
@@ -189,6 +229,16 @@ public class RabbitMQConfig {
     @Bean
     public Binding dueDiligenceDlqBinding() {
         return BindingBuilder.bind(dueDiligenceDlq()).to(dlxExchange()).with(DUE_DILIGENCE_DLQ);
+    }
+
+    @Bean
+    public Binding investmentPaymentDlqBinding() {
+        return BindingBuilder.bind(investmentPaymentDlq()).to(dlxExchange()).with(INVESTMENT_PAYMENT_DLQ);
+    }
+
+    @Bean
+    public Binding notificationPaymentDlqBinding() {
+        return BindingBuilder.bind(notificationPaymentDlq()).to(dlxExchange()).with(NOTIFICATION_PAYMENT_DLQ);
     }
 
     // --- Message Converter ---

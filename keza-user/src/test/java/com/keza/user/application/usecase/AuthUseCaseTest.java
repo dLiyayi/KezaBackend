@@ -7,6 +7,7 @@ import com.keza.common.exception.DuplicateResourceException;
 import com.keza.common.exception.ResourceNotFoundException;
 import com.keza.common.exception.UnauthorizedException;
 import com.keza.user.application.dto.*;
+import com.keza.user.domain.event.PasswordResetRequestedEvent;
 import com.keza.user.domain.event.UserRegisteredEvent;
 import com.keza.user.domain.model.User;
 import com.keza.user.domain.model.UserRole;
@@ -394,6 +395,25 @@ class AuthUseCaseTest {
         }
 
         @Test
+        @DisplayName("should publish PasswordResetRequestedEvent when user exists")
+        void shouldPublishPasswordResetEvent() {
+            ForgotPasswordRequest request = new ForgotPasswordRequest(EMAIL);
+            when(userRepository.findByEmailAndDeletedFalse(EMAIL)).thenReturn(Optional.of(testUser));
+            when(redisTemplate.opsForValue()).thenReturn(valueOperations);
+
+            authUseCase.forgotPassword(request);
+
+            ArgumentCaptor<PasswordResetRequestedEvent> captor =
+                    ArgumentCaptor.forClass(PasswordResetRequestedEvent.class);
+            verify(eventPublisher).publishEvent(captor.capture());
+            PasswordResetRequestedEvent event = captor.getValue();
+            assertThat(event.userId()).isEqualTo(USER_ID);
+            assertThat(event.email()).isEqualTo(EMAIL);
+            assertThat(event.firstName()).isEqualTo("Jane");
+            assertThat(event.token()).isNotBlank();
+        }
+
+        @Test
         @DisplayName("should do nothing when user email does not exist")
         void shouldDoNothingWhenEmailNotFound() {
             ForgotPasswordRequest request = new ForgotPasswordRequest("unknown@example.com");
@@ -402,6 +422,7 @@ class AuthUseCaseTest {
             authUseCase.forgotPassword(request);
 
             verify(redisTemplate, never()).opsForValue();
+            verify(eventPublisher, never()).publishEvent(any(PasswordResetRequestedEvent.class));
         }
     }
 

@@ -43,5 +43,9 @@
             <groupId>com.sendgrid</groupId>
             <artifactId>sendgrid-java</artifactId>
         </dependency>
+        <dependency>
+            <groupId>com.github.AfricasTalkingLtd.africastalking-java</groupId>
+            <artifactId>core</artifactId>
+        </dependency>
     </dependencies>
 </project>

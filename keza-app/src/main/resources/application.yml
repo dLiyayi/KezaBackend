@@ -45,6 +45,16 @@ management:
 keza:
   ai:
     enabled: false
+  oauth2:
+    enabled: false  # Set to true when KCB OAuth2 credentials are configured
+    kcb:
+      client-id: ${KCB_OAUTH2_CLIENT_ID:}
+      client-secret: ${KCB_OAUTH2_CLIENT_SECRET:}
+      authorization-uri: ${KCB_OAUTH2_AUTH_URI:https://sandbox.kcbbankgroup.com/oauth2/authorize}
+      token-uri: ${KCB_OAUTH2_TOKEN_URI:https://sandbox.kcbbankgroup.com/oauth2/token}
+      user-info-uri: ${KCB_OAUTH2_USERINFO_URI:https://sandbox.kcbbankgroup.com/oauth2/userinfo}
+      redirect-uri: ${KCB_OAUTH2_REDIRECT_URI:http://localhost:8080/login/oauth2/code/kcb}
+    frontend-callback-url: ${OAUTH2_FRONTEND_CALLBACK:http://localhost:3000/auth/callback}
   jwt:
     secret: ${JWT_SECRET:keza-dev-secret-key-change-in-production-must-be-at-least-256-bits-long}
     access-token-expiration: 900000     # 15 minutes
@@ -73,6 +83,12 @@ keza:
     account-number: ${KCB_ACCOUNT_NUMBER:1234567890}
     branch: ${KCB_BRANCH:Nairobi Main}
     bank-code: ${KCB_BANK_CODE:01}
+  notification:
+    africastalking:
+      api-key: ${AFRICASTALKING_API_KEY:}
+      username: ${AFRICASTALKING_USERNAME:sandbox}
+      sender-id: ${AFRICASTALKING_SENDER_ID:}
+    frontend-url: ${FRONTEND_URL:https://keza.com}
 
 # Resilience4j configuration for payment gateways
 resilience4j:

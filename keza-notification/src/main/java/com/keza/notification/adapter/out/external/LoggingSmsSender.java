@@ -2,6 +2,7 @@ package com.keza.notification.adapter.out.external;
 
 import com.keza.notification.domain.port.out.SmsSender;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.stereotype.Component;
 
 /**
@@ -9,6 +10,7 @@ import org.springframework.stereotype.Component;
  * Used in development environments where a real SMS provider is not configured.
  */
 @Component
+@ConditionalOnMissingBean(name = "africasTalkingSmsSender")
 @Slf4j
 public class LoggingSmsSender implements SmsSender {
 

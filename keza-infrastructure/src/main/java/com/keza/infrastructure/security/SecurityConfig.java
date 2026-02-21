@@ -14,6 +14,7 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.filter.OncePerRequestFilter;
@@ -35,14 +36,17 @@ public class SecurityConfig {
             "/actuator/info",
             "/v3/api-docs/**",
             "/swagger-ui/**",
-            "/swagger-ui.html"
+            "/swagger-ui.html",
+            "/login/oauth2/**",
+            "/oauth2/**"
     };
 
     @Bean
     public SecurityFilterChain securityFilterChain(
             HttpSecurity http,
             @Autowired(required = false) OncePerRequestFilter jwtAuthenticationFilter,
-            @Autowired(required = false) RateLimitingFilter rateLimitingFilter) throws Exception {
+            @Autowired(required = false) RateLimitingFilter rateLimitingFilter,
+            @Autowired(required = false) AuthenticationSuccessHandler oauth2SuccessHandler) throws Exception {
         http
                 .cors(cors -> cors.configurationSource(corsConfigurationSource))
                 .csrf(AbstractHttpConfigurer::disable)
@@ -52,6 +56,13 @@ public class SecurityConfig {
                         .requestMatchers("/api/v1/admin/**").hasAnyRole("ADMIN", "SUPER_ADMIN")
                         .anyRequest().authenticated()
                 );
+
+        // Conditionally enable OAuth2 login when handler is present (keza.oauth2.enabled=true)
+        if (oauth2SuccessHandler != null) {
+            http.oauth2Login(oauth2 -> oauth2
+                    .successHandler(oauth2SuccessHandler)
+            );
+        }
 
         if (jwtAuthenticationFilter != null) {
             http.addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
