@@ -1,27 +1,39 @@
 spring:
   datasource:
-    url: jdbc:tc:postgresql:17-alpine:///keza_test
-    driver-class-name: org.testcontainers.jdbc.ContainerDatabaseDriver
+    url: jdbc:postgresql://localhost:5432/keza
+    username: keza
+    password: keza_dev_password
+    driver-class-name: org.postgresql.Driver
 
   data:
     redis:
       host: localhost
       port: 6379
+      password: keza_redis_password
 
   rabbitmq:
     host: localhost
     port: 5672
+    username: keza
+    password: keza_rabbit_password
 
   jpa:
     hibernate:
       ddl-auto: create-drop
     show-sql: true
+    defer-datasource-initialization: true
+
+  sql:
+    init:
+      mode: always
 
   flyway:
     enabled: false
 
 keza:
   ai:
+    enabled: false
+  rate-limiting:
     enabled: false
 
 logging:
