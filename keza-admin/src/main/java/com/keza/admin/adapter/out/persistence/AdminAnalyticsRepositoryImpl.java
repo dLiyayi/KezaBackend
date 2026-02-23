@@ -70,4 +70,86 @@ public class AdminAnalyticsRepositoryImpl implements AdminAnalyticsRepository {
         String sql = "SELECT COUNT(*) FROM campaigns WHERE status IN ('DRAFT', 'UNDER_REVIEW')";
         return ((Number) em.createNativeQuery(sql).getSingleResult()).longValue();
     }
+
+    // Investment analytics
+
+    @Override
+    public long countTotalInvestments() {
+        String sql = "SELECT COUNT(*) FROM investments";
+        return ((Number) em.createNativeQuery(sql).getSingleResult()).longValue();
+    }
+
+    @Override
+    public long countInvestmentsByStatus(String status) {
+        String sql = "SELECT COUNT(*) FROM investments WHERE status = :status";
+        Query query = em.createNativeQuery(sql);
+        query.setParameter("status", status);
+        return ((Number) query.getSingleResult()).longValue();
+    }
+
+    @Override
+    public BigDecimal averageInvestmentAmount() {
+        String sql = "SELECT COALESCE(AVG(amount), 0) FROM investments WHERE status IN ('COMPLETED', 'COOLING_OFF', 'PENDING')";
+        Object result = em.createNativeQuery(sql).getSingleResult();
+        return result instanceof BigDecimal bd ? bd : new BigDecimal(result.toString());
+    }
+
+    @Override
+    public long countUniqueInvestors() {
+        String sql = "SELECT COUNT(DISTINCT investor_id) FROM investments";
+        return ((Number) em.createNativeQuery(sql).getSingleResult()).longValue();
+    }
+
+    // Campaign analytics
+
+    @Override
+    public long countCampaignsByStatus(String status) {
+        String sql = "SELECT COUNT(*) FROM campaigns WHERE status = :status AND deleted = false";
+        Query query = em.createNativeQuery(sql);
+        query.setParameter("status", status);
+        return ((Number) query.getSingleResult()).longValue();
+    }
+
+    @Override
+    public BigDecimal sumTotalRaisedAmount() {
+        String sql = "SELECT COALESCE(SUM(raised_amount), 0) FROM campaigns WHERE deleted = false";
+        Object result = em.createNativeQuery(sql).getSingleResult();
+        return result instanceof BigDecimal bd ? bd : new BigDecimal(result.toString());
+    }
+
+    @Override
+    public BigDecimal averageFundingPercentage() {
+        String sql = "SELECT COALESCE(AVG(CASE WHEN target_amount > 0 THEN (raised_amount / target_amount) * 100 ELSE 0 END), 0) " +
+                "FROM campaigns WHERE status IN ('LIVE', 'FUNDED', 'CLOSED') AND deleted = false";
+        Object result = em.createNativeQuery(sql).getSingleResult();
+        return result instanceof BigDecimal bd ? bd : new BigDecimal(result.toString());
+    }
+
+    // User analytics
+
+    @Override
+    public long countVerifiedUsers() {
+        String sql = "SELECT COUNT(*) FROM users WHERE email_verified = true AND deleted = false";
+        return ((Number) em.createNativeQuery(sql).getSingleResult()).longValue();
+    }
+
+    @Override
+    public long countLockedUsers() {
+        String sql = "SELECT COUNT(*) FROM users WHERE locked = true AND deleted = false";
+        return ((Number) em.createNativeQuery(sql).getSingleResult()).longValue();
+    }
+
+    @Override
+    public long countUsersByKycStatus(String kycStatus) {
+        String sql = "SELECT COUNT(*) FROM users WHERE kyc_status = :kycStatus AND deleted = false";
+        Query query = em.createNativeQuery(sql);
+        query.setParameter("kycStatus", kycStatus);
+        return ((Number) query.getSingleResult()).longValue();
+    }
+
+    @Override
+    public long countRegistrationsSince(int days) {
+        String sql = "SELECT COUNT(*) FROM users WHERE created_at >= NOW() - INTERVAL '" + days + " days' AND deleted = false";
+        return ((Number) em.createNativeQuery(sql).getSingleResult()).longValue();
+    }
 }

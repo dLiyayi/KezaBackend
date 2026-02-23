@@ -26,4 +26,29 @@ public interface AdminAnalyticsRepository {
     long countPendingKyc();
 
     long countPendingCampaigns();
+
+    // Investment analytics
+    long countTotalInvestments();
+
+    long countInvestmentsByStatus(String status);
+
+    BigDecimal averageInvestmentAmount();
+
+    long countUniqueInvestors();
+
+    // Campaign analytics
+    long countCampaignsByStatus(String status);
+
+    BigDecimal sumTotalRaisedAmount();
+
+    BigDecimal averageFundingPercentage();
+
+    // User analytics
+    long countVerifiedUsers();
+
+    long countLockedUsers();
+
+    long countUsersByKycStatus(String kycStatus);
+
+    long countRegistrationsSince(int days);
 }

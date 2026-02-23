@@ -55,6 +55,8 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.GET, "/api/v1/campaigns/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/campaigns").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/announcements/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/announcements").permitAll()
                         .requestMatchers(PUBLIC_ENDPOINTS).permitAll()
                         .requestMatchers("/api/v1/admin/**").hasAnyRole("ADMIN", "SUPER_ADMIN")
                         .anyRequest().authenticated()

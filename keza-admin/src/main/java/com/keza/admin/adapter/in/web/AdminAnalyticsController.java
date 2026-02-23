@@ -1,6 +1,6 @@
 package com.keza.admin.adapter.in.web;
 
-import com.keza.admin.application.dto.PlatformOverviewResponse;
+import com.keza.admin.application.dto.*;
 import com.keza.admin.application.usecase.AdminAnalyticsUseCase;
 import com.keza.common.dto.ApiResponse;
 import lombok.RequiredArgsConstructor;
@@ -21,6 +21,24 @@ public class AdminAnalyticsController {
     @GetMapping("/overview")
     public ResponseEntity<ApiResponse<PlatformOverviewResponse>> getPlatformOverview() {
         PlatformOverviewResponse response = adminAnalyticsUseCase.getPlatformOverview();
+        return ResponseEntity.ok(ApiResponse.success(response));
+    }
+
+    @GetMapping("/investments")
+    public ResponseEntity<ApiResponse<InvestmentAnalyticsResponse>> getInvestmentAnalytics() {
+        InvestmentAnalyticsResponse response = adminAnalyticsUseCase.getInvestmentAnalytics();
+        return ResponseEntity.ok(ApiResponse.success(response));
+    }
+
+    @GetMapping("/campaigns")
+    public ResponseEntity<ApiResponse<CampaignAnalyticsResponse>> getCampaignAnalytics() {
+        CampaignAnalyticsResponse response = adminAnalyticsUseCase.getCampaignAnalytics();
+        return ResponseEntity.ok(ApiResponse.success(response));
+    }
+
+    @GetMapping("/users")
+    public ResponseEntity<ApiResponse<UserAnalyticsResponse>> getUserAnalytics() {
+        UserAnalyticsResponse response = adminAnalyticsUseCase.getUserAnalytics();
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 }
