@@ -130,6 +130,7 @@ public class AuthUseCase {
             eventPublisher.publishEvent(new PasswordResetRequestedEvent(
                     user.getId(), user.getEmail(), user.getFirstName(), token));
             log.info("Password reset token generated for user: {}", user.getEmail());
+            log.debug("Password reset link: /reset-password?token={}", token);
         });
     }
 
@@ -170,6 +171,7 @@ public class AuthUseCase {
                 userId, user.getEmail(), user.getFirstName(), token));
 
         log.info("Email verification token generated for user: {}", user.getEmail());
+        log.debug("Email verification link: /verify-email?token={}", token);
     }
 
     @Transactional
