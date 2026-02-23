@@ -29,7 +29,8 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.Duration;
 import java.time.Instant;
-import java.util.UUID;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -114,7 +115,7 @@ public class InvestmentUseCase {
         log.info("Investment {} created successfully: {} shares at {} = {}",
                 investment.getId(), shares, sharePrice, actualAmount);
 
-        return mapToResponse(investment);
+        return mapToResponse(investment, campaign);
     }
 
     @Transactional
@@ -172,7 +173,7 @@ public class InvestmentUseCase {
         transactionRepository.save(refundTransaction);
 
         log.info("Investment {} cancelled successfully", investmentId);
-        return mapToResponse(investment);
+        return mapToResponse(investment, campaign);
     }
 
     @Transactional
@@ -194,7 +195,7 @@ public class InvestmentUseCase {
         investment = investmentRepository.save(investment);
 
         log.info("Investment {} completed successfully", investmentId);
-        return mapToResponse(investment);
+        return mapToResponse(investment, findCampaignSafe(investment.getCampaignId()));
     }
 
     @Transactional
@@ -216,24 +217,54 @@ public class InvestmentUseCase {
         investment = investmentRepository.save(investment);
 
         log.info("Investment {} refunded successfully", investmentId);
-        return mapToResponse(investment);
+        return mapToResponse(investment, findCampaignSafe(investment.getCampaignId()));
     }
 
     @Transactional(readOnly = true)
     public InvestmentResponse getInvestment(UUID id) {
         Investment investment = investmentRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Investment", id));
-        return mapToResponse(investment);
+        Campaign campaign = findCampaignSafe(investment.getCampaignId());
+        return mapToResponse(investment, campaign);
     }
 
     @Transactional(readOnly = true)
     public Page<InvestmentResponse> getUserInvestments(UUID userId, Pageable pageable) {
-        return investmentRepository.findByInvestorIdOrderByCreatedAtDesc(userId, pageable)
-                .map(this::mapToResponse);
+        Page<Investment> investments = investmentRepository.findByInvestorIdOrderByCreatedAtDesc(userId, pageable);
+        Map<UUID, Campaign> campaignMap = buildCampaignMap(investments.getContent());
+        return investments.map(inv -> mapToResponse(inv, campaignMap.get(inv.getCampaignId())));
     }
 
-    private InvestmentResponse mapToResponse(Investment investment) {
-        return InvestmentResponse.builder()
+    @Transactional(readOnly = true)
+    public Page<InvestmentResponse> getCampaignInvestments(UUID campaignId, UUID issuerId, Pageable pageable) {
+        Campaign campaign = campaignRepository.findByIdAndDeletedFalse(campaignId)
+                .orElseThrow(() -> new ResourceNotFoundException("Campaign", campaignId));
+
+        if (!campaign.getIssuerId().equals(issuerId)) {
+            throw new BusinessRuleException("FORBIDDEN", "You do not own this campaign");
+        }
+
+        return investmentRepository.findByCampaignIdOrderByCreatedAtDesc(campaignId, pageable)
+                .map(inv -> mapToResponse(inv, campaign));
+    }
+
+    private Campaign findCampaignSafe(UUID campaignId) {
+        return campaignRepository.findById(campaignId).orElse(null);
+    }
+
+    private Map<UUID, Campaign> buildCampaignMap(List<Investment> investments) {
+        Set<UUID> campaignIds = investments.stream()
+                .map(Investment::getCampaignId)
+                .collect(Collectors.toSet());
+        if (campaignIds.isEmpty()) {
+            return Collections.emptyMap();
+        }
+        return campaignRepository.findAllById(campaignIds).stream()
+                .collect(Collectors.toMap(Campaign::getId, c -> c));
+    }
+
+    public InvestmentResponse mapToResponse(Investment investment, Campaign campaign) {
+        InvestmentResponse.InvestmentResponseBuilder builder = InvestmentResponse.builder()
                 .id(investment.getId())
                 .investorId(investment.getInvestorId())
                 .campaignId(investment.getCampaignId())
@@ -248,7 +279,15 @@ public class InvestmentUseCase {
                 .cancelledAt(investment.getCancelledAt())
                 .cancellationReason(investment.getCancellationReason())
                 .createdAt(investment.getCreatedAt())
-                .updatedAt(investment.getUpdatedAt())
-                .build();
+                .updatedAt(investment.getUpdatedAt());
+
+        if (campaign != null) {
+            builder.campaignTitle(campaign.getTitle())
+                    .campaignCompanyName(campaign.getCompanyName())
+                    .campaignIndustry(campaign.getIndustry())
+                    .campaignStatus(campaign.getStatus() != null ? campaign.getStatus().name() : null);
+        }
+
+        return builder.build();
     }
 }

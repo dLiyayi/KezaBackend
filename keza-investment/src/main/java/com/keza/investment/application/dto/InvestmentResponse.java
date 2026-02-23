@@ -29,6 +29,10 @@ public class InvestmentResponse {
     private Instant completedAt;
     private Instant cancelledAt;
     private String cancellationReason;
+    private String campaignTitle;
+    private String campaignCompanyName;
+    private String campaignIndustry;
+    private String campaignStatus;
     private Instant createdAt;
     private Instant updatedAt;
 }

@@ -19,6 +19,9 @@ public class PortfolioResponse {
 
     private BigDecimal totalInvested;
     private int activeInvestments;
+    private int pendingInvestments;
+    private int cancelledInvestments;
+    private int totalInvestmentCount;
     private Map<String, BigDecimal> sectorDistribution;
     private List<InvestmentResponse> investments;
 }

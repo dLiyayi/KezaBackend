@@ -27,6 +27,7 @@ public class PortfolioUseCase {
 
     private final InvestmentRepository investmentRepository;
     private final CampaignRepository campaignRepository;
+    private final InvestmentUseCase investmentUseCase;
 
     @Transactional(readOnly = true)
     @Cacheable(value = "portfolio", key = "#userId")
@@ -50,21 +51,45 @@ public class PortfolioUseCase {
                         || inv.getStatus() == InvestmentStatus.COOLING_OFF)
                 .count();
 
-        Map<String, BigDecimal> sectorDistribution = buildSectorDistribution(allInvestments);
+        int pendingInvestments = (int) allInvestments.stream()
+                .filter(inv -> inv.getStatus() == InvestmentStatus.PENDING
+                        || inv.getStatus() == InvestmentStatus.PAYMENT_INITIATED)
+                .count();
+
+        int cancelledInvestments = (int) allInvestments.stream()
+                .filter(inv -> inv.getStatus() == InvestmentStatus.CANCELLED
+                        || inv.getStatus() == InvestmentStatus.REFUNDED)
+                .count();
+
+        // Batch lookup campaigns for all investments
+        Set<UUID> campaignIds = allInvestments.stream()
+                .map(Investment::getCampaignId)
+                .collect(Collectors.toSet());
+
+        Map<UUID, Campaign> campaignMap = campaignIds.isEmpty()
+                ? Collections.emptyMap()
+                : campaignRepository.findAllById(campaignIds).stream()
+                        .collect(Collectors.toMap(Campaign::getId, c -> c));
+
+        Map<String, BigDecimal> sectorDistribution = buildSectorDistribution(allInvestments, campaignMap);
 
         List<InvestmentResponse> investmentResponses = allInvestments.stream()
-                .map(this::mapToResponse)
+                .map(inv -> investmentUseCase.mapToResponse(inv, campaignMap.get(inv.getCampaignId())))
                 .collect(Collectors.toList());
 
         return PortfolioResponse.builder()
                 .totalInvested(totalInvested)
                 .activeInvestments(activeInvestments)
+                .pendingInvestments(pendingInvestments)
+                .cancelledInvestments(cancelledInvestments)
+                .totalInvestmentCount(allInvestments.size())
                 .sectorDistribution(sectorDistribution)
                 .investments(investmentResponses)
                 .build();
     }
 
-    private Map<String, BigDecimal> buildSectorDistribution(List<Investment> investments) {
+    private Map<String, BigDecimal> buildSectorDistribution(List<Investment> investments,
+                                                             Map<UUID, Campaign> campaignMap) {
         List<Investment> activeInvestments = investments.stream()
                 .filter(inv -> inv.getStatus() == InvestmentStatus.COMPLETED
                         || inv.getStatus() == InvestmentStatus.COOLING_OFF)
@@ -74,17 +99,12 @@ public class PortfolioUseCase {
             return Collections.emptyMap();
         }
 
-        Set<UUID> campaignIds = activeInvestments.stream()
-                .map(Investment::getCampaignId)
-                .collect(Collectors.toSet());
-
-        Map<UUID, String> campaignIndustryMap = campaignRepository.findAllById(campaignIds).stream()
-                .collect(Collectors.toMap(Campaign::getId, c -> c.getIndustry() != null ? c.getIndustry() : "Other"));
-
         Map<String, BigDecimal> sectorTotals = new HashMap<>();
 
         for (Investment investment : activeInvestments) {
-            String industry = campaignIndustryMap.getOrDefault(investment.getCampaignId(), "Other");
+            Campaign campaign = campaignMap.get(investment.getCampaignId());
+            String industry = (campaign != null && campaign.getIndustry() != null)
+                    ? campaign.getIndustry() : "Other";
             sectorTotals.merge(industry, investment.getAmount(), BigDecimal::add);
         }
 
@@ -104,25 +124,5 @@ public class PortfolioUseCase {
         }
 
         return sectorPercentages;
-    }
-
-    private InvestmentResponse mapToResponse(Investment investment) {
-        return InvestmentResponse.builder()
-                .id(investment.getId())
-                .investorId(investment.getInvestorId())
-                .campaignId(investment.getCampaignId())
-                .amount(investment.getAmount())
-                .shares(investment.getShares())
-                .sharePrice(investment.getSharePrice())
-                .status(investment.getStatus().name())
-                .paymentMethod(investment.getPaymentMethod() != null
-                        ? investment.getPaymentMethod().name() : null)
-                .coolingOffExpiresAt(investment.getCoolingOffExpiresAt())
-                .completedAt(investment.getCompletedAt())
-                .cancelledAt(investment.getCancelledAt())
-                .cancellationReason(investment.getCancellationReason())
-                .createdAt(investment.getCreatedAt())
-                .updatedAt(investment.getUpdatedAt())
-                .build();
     }
 }

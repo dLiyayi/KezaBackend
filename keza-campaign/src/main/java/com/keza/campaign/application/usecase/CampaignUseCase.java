@@ -79,6 +79,22 @@ public class CampaignUseCase {
     }
 
     @Transactional(readOnly = true)
+    public Page<CampaignResponse> getIssuerCampaigns(UUID issuerId, CampaignStatus statusFilter, Pageable pageable) {
+        Specification<Campaign> spec = Specification.where(
+                (root, query, cb) -> cb.and(
+                        cb.equal(root.get("issuerId"), issuerId),
+                        cb.isFalse(root.get("deleted"))
+                ));
+
+        if (statusFilter != null) {
+            spec = spec.and((root, query, cb) ->
+                    cb.equal(root.get("status"), statusFilter));
+        }
+
+        return campaignRepository.findAll(spec, pageable).map(this::mapToResponse);
+    }
+
+    @Transactional(readOnly = true)
     public CampaignResponse getCampaign(UUID id) {
         Campaign campaign = findCampaignOrThrow(id);
         return mapToResponse(campaign);
@@ -272,7 +288,7 @@ public class CampaignUseCase {
         return spec;
     }
 
-    private CampaignResponse mapToResponse(Campaign campaign) {
+    public CampaignResponse mapToResponse(Campaign campaign) {
         List<CampaignResponse.CampaignMediaResponse> mediaResponses = null;
         if (campaign.getMedia() != null) {
             mediaResponses = campaign.getMedia().stream()
