@@ -45,6 +45,7 @@ public class InvestmentUseCase {
     private final UserRepository userRepository;
     private final InvestmentValidator investmentValidator;
     private final ApplicationEventPublisher eventPublisher;
+    private final InvestmentEventUseCase investmentEventUseCase;
 
     @Transactional
     public InvestmentResponse createInvestment(UUID investorId, CreateInvestmentRequest request) {
@@ -115,6 +116,9 @@ public class InvestmentUseCase {
         log.info("Investment {} created successfully: {} shares at {} = {}",
                 investment.getId(), shares, sharePrice, actualAmount);
 
+        investmentEventUseCase.recordEvent(investment.getId(), investorId,
+                "INVESTMENT_CREATED", "Investment of " + actualAmount + " KES in " + campaign.getTitle(), null);
+
         return mapToResponse(investment, campaign);
     }
 
@@ -173,6 +177,10 @@ public class InvestmentUseCase {
         transactionRepository.save(refundTransaction);
 
         log.info("Investment {} cancelled successfully", investmentId);
+
+        investmentEventUseCase.recordEvent(investmentId, userId,
+                "INVESTMENT_CANCELLED", "Investment cancelled within cooling-off period", null);
+
         return mapToResponse(investment, campaign);
     }
 
@@ -195,6 +203,10 @@ public class InvestmentUseCase {
         investment = investmentRepository.save(investment);
 
         log.info("Investment {} completed successfully", investmentId);
+
+        investmentEventUseCase.recordEvent(investmentId, investment.getInvestorId(),
+                "INVESTMENT_COMPLETED", "Investment payment confirmed and completed", null);
+
         return mapToResponse(investment, findCampaignSafe(investment.getCampaignId()));
     }
 
@@ -217,6 +229,10 @@ public class InvestmentUseCase {
         investment = investmentRepository.save(investment);
 
         log.info("Investment {} refunded successfully", investmentId);
+
+        investmentEventUseCase.recordEvent(investmentId, investment.getInvestorId(),
+                "INVESTMENT_REFUNDED", "Investment refunded", null);
+
         return mapToResponse(investment, findCampaignSafe(investment.getCampaignId()));
     }
 

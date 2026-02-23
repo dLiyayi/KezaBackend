@@ -22,6 +22,10 @@ public class PortfolioResponse {
     private int pendingInvestments;
     private int cancelledInvestments;
     private int totalInvestmentCount;
+    private BigDecimal totalReturns;
+    private BigDecimal roiPercentage;
+    private BigDecimal averageInvestmentAmount;
+    private Map<String, Integer> investmentStageBreakdown;
     private Map<String, BigDecimal> sectorDistribution;
     private List<InvestmentResponse> investments;
 }

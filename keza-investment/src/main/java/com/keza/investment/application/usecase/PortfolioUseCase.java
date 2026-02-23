@@ -17,6 +17,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -77,12 +78,36 @@ public class PortfolioUseCase {
                 .map(inv -> investmentUseCase.mapToResponse(inv, campaignMap.get(inv.getCampaignId())))
                 .collect(Collectors.toList());
 
+        // Calculate performance metrics
+        BigDecimal totalReturns = calculateTotalReturns(allInvestments, campaignMap);
+        BigDecimal roiPercentage = BigDecimal.ZERO;
+        if (totalInvested.signum() > 0) {
+            roiPercentage = totalReturns
+                    .multiply(BigDecimal.valueOf(100))
+                    .divide(totalInvested, 2, RoundingMode.HALF_UP);
+        }
+
+        BigDecimal averageInvestmentAmount = BigDecimal.ZERO;
+        if (!allInvestments.isEmpty()) {
+            BigDecimal allAmounts = allInvestments.stream()
+                    .map(Investment::getAmount)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+            averageInvestmentAmount = allAmounts.divide(
+                    BigDecimal.valueOf(allInvestments.size()), 2, RoundingMode.HALF_UP);
+        }
+
+        Map<String, Integer> stageBreakdown = buildStageBreakdown(allInvestments);
+
         return PortfolioResponse.builder()
                 .totalInvested(totalInvested)
                 .activeInvestments(activeInvestments)
                 .pendingInvestments(pendingInvestments)
                 .cancelledInvestments(cancelledInvestments)
                 .totalInvestmentCount(allInvestments.size())
+                .totalReturns(totalReturns)
+                .roiPercentage(roiPercentage)
+                .averageInvestmentAmount(averageInvestmentAmount)
+                .investmentStageBreakdown(stageBreakdown)
                 .sectorDistribution(sectorDistribution)
                 .investments(investmentResponses)
                 .build();
@@ -124,5 +149,35 @@ public class PortfolioUseCase {
         }
 
         return sectorPercentages;
+    }
+
+    private BigDecimal calculateTotalReturns(List<Investment> investments, Map<UUID, Campaign> campaignMap) {
+        BigDecimal totalReturns = BigDecimal.ZERO;
+        for (Investment investment : investments) {
+            if (investment.getStatus() == InvestmentStatus.COMPLETED
+                    || investment.getStatus() == InvestmentStatus.COOLING_OFF) {
+                Campaign campaign = campaignMap.get(investment.getCampaignId());
+                if (campaign != null && campaign.getSharePrice() != null) {
+                    BigDecimal currentValue = campaign.getSharePrice()
+                            .multiply(BigDecimal.valueOf(investment.getShares()));
+                    BigDecimal gain = currentValue.subtract(investment.getAmount());
+                    totalReturns = totalReturns.add(gain);
+                }
+            }
+        }
+        return totalReturns;
+    }
+
+    private Map<String, Integer> buildStageBreakdown(List<Investment> investments) {
+        Map<String, Integer> breakdown = new LinkedHashMap<>();
+        for (InvestmentStatus status : InvestmentStatus.values()) {
+            int count = (int) investments.stream()
+                    .filter(inv -> inv.getStatus() == status)
+                    .count();
+            if (count > 0) {
+                breakdown.put(status.name(), count);
+            }
+        }
+        return breakdown;
     }
 }
