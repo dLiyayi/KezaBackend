@@ -40,8 +40,11 @@ public class AuthController {
 
     @PostMapping("/logout")
     public ResponseEntity<ApiResponse<Void>> logout(
-            @RequestHeader("Authorization") String authHeader,
+            @RequestHeader(value = "Authorization", required = false) String authHeader,
             Authentication authentication) {
+        if (authentication == null || authHeader == null || !authHeader.startsWith("Bearer ")) {
+            return ResponseEntity.ok(ApiResponse.success(null, "Logged out successfully"));
+        }
         String token = authHeader.substring(7);
         UUID userId = (UUID) authentication.getPrincipal();
         authUseCase.logout(token, userId);
