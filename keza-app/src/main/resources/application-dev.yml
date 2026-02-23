@@ -28,6 +28,10 @@ spring:
     retry:
       max-attempts: 1
 
+keza:
+  notification:
+    frontend-url: http://localhost
+
 logging:
   level:
     com.keza: DEBUG

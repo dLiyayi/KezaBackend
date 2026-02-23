@@ -55,7 +55,7 @@ public class UserEmailEventListener {
     public void handlePasswordResetRequested(PasswordResetRequestedEvent event) {
         log.info("Handling password reset request for user: {}", event.email());
 
-        String resetUrl = frontendUrl + "/reset-password?token=" + event.token();
+        String resetUrl = frontendUrl + "/set-password?token=" + event.token();
         String htmlBody = buildPasswordResetHtml(event.firstName(), resetUrl);
 
         notificationService.sendEmailNotification(
