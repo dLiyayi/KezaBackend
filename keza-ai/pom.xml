@@ -34,12 +34,10 @@
         <dependency>
             <groupId>org.springframework.ai</groupId>
             <artifactId>spring-ai-starter-model-anthropic</artifactId>
-            <optional>true</optional>
         </dependency>
         <dependency>
             <groupId>org.springframework.ai</groupId>
             <artifactId>spring-ai-pgvector-store</artifactId>
-            <optional>true</optional>
         </dependency>
         <dependency>
             <groupId>io.github.resilience4j</groupId>
@@ -49,7 +47,6 @@
             <groupId>org.apache.pdfbox</groupId>
             <artifactId>pdfbox</artifactId>
             <version>3.0.4</version>
-            <optional>true</optional>
         </dependency>
     </dependencies>
 </project>
