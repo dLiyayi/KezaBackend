@@ -4,6 +4,8 @@ import com.keza.common.domain.model.AuditableEntity;
 import com.keza.common.enums.DocumentType;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -45,6 +47,7 @@ public class KycDocument extends AuditableEntity {
     @Column(name = "rejection_reason", columnDefinition = "TEXT")
     private String rejectionReason;
 
+    @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "extracted_data", columnDefinition = "jsonb")
     private String extractedData;
 

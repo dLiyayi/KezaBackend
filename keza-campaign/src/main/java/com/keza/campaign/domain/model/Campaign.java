@@ -5,6 +5,8 @@ import com.keza.common.enums.CampaignStatus;
 import com.keza.common.enums.OfferingType;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -111,15 +113,18 @@ public class Campaign extends SoftDeletableEntity {
     @Column(name = "pitch_video_url", length = 500)
     private String pitchVideoUrl;
 
+    @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "financial_projections", columnDefinition = "JSONB")
     private String financialProjections;
 
     @Column(name = "risk_factors", columnDefinition = "TEXT")
     private String riskFactors;
 
+    @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "use_of_funds", columnDefinition = "JSONB")
     private String useOfFunds;
 
+    @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "team_members", columnDefinition = "JSONB")
     private String teamMembers;
 

@@ -5,6 +5,8 @@ import com.keza.common.enums.PaymentMethod;
 import com.keza.common.enums.TransactionStatus;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.math.BigDecimal;
 import java.util.UUID;
@@ -47,6 +49,7 @@ public class Transaction extends BaseEntity {
     @Column(name = "provider_reference")
     private String providerReference;
 
+    @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "provider_metadata", columnDefinition = "JSONB")
     private String providerMetadata;
 
