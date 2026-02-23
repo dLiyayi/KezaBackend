@@ -30,7 +30,7 @@ spring:
 
 keza:
   notification:
-    frontend-url: http://localhost
+    frontend-url: http://localhost:3000
 
 logging:
   level:
