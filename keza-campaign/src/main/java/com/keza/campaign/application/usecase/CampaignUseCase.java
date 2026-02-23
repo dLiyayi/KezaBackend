@@ -92,10 +92,23 @@ public class CampaignUseCase {
     }
 
     @Transactional(readOnly = true)
-    @Cacheable(value = "campaigns", key = "#criteria.toString() + #pageable.toString()")
     public Page<CampaignResponse> searchCampaigns(CampaignSearchCriteria criteria, Pageable pageable) {
         Specification<Campaign> spec = buildSpecification(criteria);
         return campaignRepository.findAll(spec, pageable).map(this::mapToResponse);
+    }
+
+    @Transactional(readOnly = true)
+    @Cacheable(value = "campaigns", key = "'featured-' + #limit")
+    public List<CampaignResponse> getFeaturedCampaigns(int limit) {
+        Specification<Campaign> spec = Specification.where(
+                (root, query, cb) -> cb.and(
+                        cb.isFalse(root.get("deleted")),
+                        cb.equal(root.get("status"), CampaignStatus.LIVE)
+                ));
+        Pageable pageable = Pageable.ofSize(limit);
+        return campaignRepository.findAll(spec, pageable)
+                .map(this::mapToResponse)
+                .getContent();
     }
 
     @Transactional

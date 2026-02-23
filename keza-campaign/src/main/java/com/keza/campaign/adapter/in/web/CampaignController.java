@@ -19,6 +19,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
+import java.util.List;
 import java.util.UUID;
 
 @RestController
@@ -103,6 +104,14 @@ public class CampaignController {
         UUID issuerId = UUID.fromString(authentication.getName());
         CampaignResponse response = campaignUseCase.submitForReview(id, issuerId);
         return ResponseEntity.ok(ApiResponse.success(response, "Campaign submitted for review"));
+    }
+
+    @GetMapping("/featured")
+    public ResponseEntity<ApiResponse<List<CampaignResponse>>> getFeaturedCampaigns(
+            @RequestParam(defaultValue = "6") int limit) {
+        limit = Math.min(limit, 20);
+        List<CampaignResponse> featured = campaignUseCase.getFeaturedCampaigns(limit);
+        return ResponseEntity.ok(ApiResponse.success(featured));
     }
 
     @GetMapping("/{id}")
