@@ -1,6 +1,7 @@
 package com.keza.integration;
 
 import org.junit.jupiter.api.*;
+import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.client.TestRestTemplate;
@@ -16,11 +17,13 @@ import static org.assertj.core.api.Assertions.assertThat;
  * End-to-end integration test for the auth flow.
  * Requires Docker Compose services running (PostgreSQL, Redis, RabbitMQ).
  * Start with: docker compose -f docker/docker-compose.yml up -d
+ * Set KEZA_INTEGRATION_TESTS=true to enable these tests.
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @ActiveProfiles("test")
 @DisplayName("Auth Integration - Full End-to-End Flow")
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
+@EnabledIfEnvironmentVariable(named = "KEZA_INTEGRATION_TESTS", matches = "true")
 class AuthIntegrationTest {
 
     @Autowired

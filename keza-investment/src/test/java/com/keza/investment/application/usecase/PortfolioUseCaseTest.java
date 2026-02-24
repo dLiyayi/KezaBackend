@@ -37,6 +37,8 @@ class PortfolioUseCaseTest {
     private InvestmentRepository investmentRepository;
     @Mock
     private CampaignRepository campaignRepository;
+    @Mock
+    private InvestmentUseCase investmentUseCase;
 
     @InjectMocks
     private PortfolioUseCase portfolioUseCase;

@@ -58,6 +58,8 @@ class InvestmentUseCaseTest {
     private InvestmentValidator investmentValidator;
     @Mock
     private ApplicationEventPublisher eventPublisher;
+    @Mock
+    private InvestmentEventUseCase investmentEventUseCase;
 
     @InjectMocks
     private InvestmentUseCase investmentUseCase;
