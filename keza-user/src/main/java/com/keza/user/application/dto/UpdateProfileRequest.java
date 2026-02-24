@@ -30,4 +30,15 @@ public class UpdateProfileRequest {
     private String nationalId;
     private String kraPin;
     private BigDecimal annualIncome;
+
+    @Size(max = 20)
+    private String gender;
+
+    @Size(max = 100)
+    private String countryOfResidence;
+
+    @Size(max = 100)
+    private String citizenship;
+
+    private BigDecimal netWorth;
 }

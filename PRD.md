@@ -1498,139 +1498,195 @@ POST /api/v1/webhooks/kcb/payment-confirmed
 
 ## 10. User Flows
 
-### 10.1 Investor Registration & Onboarding Flow (AI-Assisted)
+### 10.1 Investor Registration & Onboarding Flow
+
+The investor onboarding process is layered, allowing users to browse opportunities before completing full legal and financial verification. The flow progresses through 4 phases with AI assistance at every step.
+
+#### Phase 1: Account Creation & Initial Setup
 
 ```
-┌──────────────────┐
-│  Landing Page    │
-│  "Invest in      │
-│  Growing         │
-│  Businesses"     │
-└────────┬─────────┘
-         │
-         ↓ Click "Get Started"
 ┌──────────────────────────────────────────┐
-│  AI Welcome                              │
-│  "Hi! I'm InvestBot, your AI assistant.  │
-│   I'll help you get started in just      │
-│   10 minutes. Ready?"                    │
-└────────┬─────────────────────────────────┘
-         │
-         ↓ User: "Yes"
-┌──────────────────────────────────────────┐
-│  AI-Guided Registration                  │
-│  AI: "Let's start with your email"       │
-│  - Email validation (AI checks format)   │
-│  - Phone (AI validates country code)     │
-│  - Password (AI suggests strong password)│
-│  - AI provides tips at each step         │
-└────────┬─────────────────────────────────┘
-         │
-         ↓ OTP Verification
-┌──────────────────────────────────────────┐
-│  AI-Assisted Basic Profile              │
-│  AI: "Tell me about yourself"            │
-│  - Name (AI detects format errors)       │
-│  - DOB (AI validates age requirement)    │
-│  - Nationality (AI pre-fills based on    │
-│    phone code)                           │
-│  AI provides contextual help inline      │
+│  Registration                            │
+│  - Email address + password              │
+│  - AI validates format & strength        │
 └────────┬─────────────────────────────────┘
          │
          ↓
 ┌──────────────────────────────────────────┐
-│  AI Investment Profile Assessment        │
-│  AI conversational questionnaire:        │
-│  "Have you invested before?"             │
-│  "What's your risk tolerance?"           │
-│  "What sectors interest you?"            │
-│  AI explains each concept simply         │
-│  Provides examples                       │
-│  Recommends settings based on answers    │
+│  Email Verification                      │
+│  - Confirmation link sent to inbox       │
+│  - Must verify before proceeding         │
 └────────┬─────────────────────────────────┘
          │
          ↓
 ┌──────────────────────────────────────────┐
-│  AI KYC Upload Assistant                 │
-│  AI guides document capture:             │
-│  "Let's verify your identity"            │
-│                                          │
-│  For ID Document:                        │
-│  - AI provides photo guide               │
-│  - Real-time quality check              │
-│  - "Move closer" / "Better lighting"     │
-│  - Auto-crop and enhance                 │
-│  - Instant validation                    │
-│                                          │
-│  For Proof of Address:                   │
-│  - AI lists acceptable documents         │
-│  - Checks date validity                  │
-│  - Verifies address format               │
-│                                          │
-│  For Selfie:                             │
-│  - AI guides positioning                 │
-│  - Liveness detection                    │
-│  - Face matching with ID                 │
-│                                          │
-│  AI: "Great! Your documents look good.   │
-│       I've submitted them for review.    │
-│       You'll hear back in 24-48 hours."  │
+│  Basic Profile (Registration Wizard)     │
+│  - Full name (first + last)             │
+│  - Date of birth (AI validates age)      │
+│  - Gender                                │
+│  - Country of residence                  │
+│  - Mobile phone number                   │
+│  AI: pre-fills based on phone code,      │
+│       provides contextual help inline    │
 └────────┬─────────────────────────────────┘
          │
-         ↓ Submit for AI + Human verification
+         ↓ Can now browse campaigns (read-only)
+```
+
+**API Endpoints (Phase 1):**
+- `POST /api/v1/auth/register` — Create account
+- `GET /api/v1/auth/verify-email?token=...` — Verify email
+- `PUT /api/v1/users/me` — Complete basic profile
+- `GET /api/v1/investor/onboarding/status` — Check progress
+
+#### Phase 2: Investment Account Opening
+
+To trade on the Keza Marketplace or hold funds, investors must open a specific Investment Account.
+
+```
 ┌──────────────────────────────────────────┐
-│  AI Document Processing (Background)     │
+│  Additional Personal Data                │
+│  - Citizenship                           │
+│  - Marital status                        │
+│  - Employment status                     │
+└────────┬─────────────────────────────────┘
+         │
+         ↓
+┌──────────────────────────────────────────┐
+│  Financial Profile                       │
+│  - Annual income                         │
+│  - Net worth                             │
+│  These determine legal investment limits │
+│  per SEC Regulation CF/A+                │
+└────────┬─────────────────────────────────┘
+         │
+         ↓
+┌──────────────────────────────────────────┐
+│  Account Type Selection                  │
+│  - Individual (auto-opens instantly)     │
+│  - Joint                                 │
+│  - Trust                                 │
+│  - Company                               │
+│  - IRA                                   │
+│                                          │
+│  Processing: Most open within minutes.   │
+│  Non-individual may take up to 10        │
+│  business days for manual review.        │
+└────────┬─────────────────────────────────┘
+         │
+         ↓ Account status: OPEN
+```
+
+**API Endpoints (Phase 2):**
+- `POST /api/v1/investor/onboarding/accounts` — Open investment account
+- `GET /api/v1/investor/onboarding/accounts` — List my accounts
+- `PUT /api/v1/investor/onboarding/admin/accounts/{id}/review` — Admin review (non-individual)
+
+#### Phase 3: Identity & Accreditation Verification
+
+```
+┌──────────────────────────────────────────┐
+│  KYC / AML Checks                        │
+│  - Third-party verification (Veriff)     │
+│  - AI-guided document capture            │
+│  - National ID / Passport / License      │
+│  - Proof of address                      │
+│  - Selfie with liveness detection        │
+│                                          │
+│  AI Document Processing (Background):    │
 │  - OCR extraction                        │
 │  - Government database verification      │
-│  - Fraud detection                       │
-│  - Risk scoring                          │
-│  → Generates report for human review     │
-│  (AI confidence: 96%)                    │
+│  - Fraud detection & risk scoring        │
+│  - Confidence > 95% → Auto-approve       │
+│  - 85-95% → Human review (2-4 hrs)      │
+│  - < 85% → Detailed review (24 hrs)     │
 └────────┬─────────────────────────────────┘
          │
-         ↓ If AI confidence > 95% → Auto-approve
-         ↓ If 85-95% → Human review (2-4 hrs)
-         ↓ If < 85% → Detailed human review (24 hrs)
+         ↓ (Optional — required for Reg D offerings)
 ┌──────────────────────────────────────────┐
-│  KCB Account Linking (Optional)          │
-│  AI: "Link your KCB account for instant  │
-│       payments and better limits"        │
-│  - OAuth flow with KCB                   │
-│  - AI explains benefits                  │
-│  - Skip option available                 │
+│  Accredited Investor Verification        │
+│                                          │
+│  Income Method:                          │
+│  - $200k+ individual income OR           │
+│  - $300k+ joint income                   │
+│  - Verified via tax docs (1040s, W-2s)   │
+│                                          │
+│  Net Worth Method:                       │
+│  - $1M+ excluding primary residence      │
+│  - Verified via account statements or    │
+│    appraisal reports                     │
+│                                          │
+│  Professional Method:                    │
+│  - FINRA CRD number                      │
+│  - Series 7, 65, or 82 licenses         │
+│                                          │
+│  Accreditation valid for 1 year          │
 └────────┬─────────────────────────────────┘
          │
          ↓ KYC Approved
+```
+
+**API Endpoints (Phase 3):**
+- `POST /api/v1/kyc/documents` — Upload KYC document
+- `GET /api/v1/kyc/documents` — List my documents
+- `POST /api/v1/investor/onboarding/accreditation` — Submit accreditation
+- `GET /api/v1/investor/onboarding/accreditation` — View my accreditations
+- `PUT /api/v1/investor/onboarding/admin/accreditation/{id}/review` — Admin review
+
+#### Phase 4: Executing an Investment
+
+```
 ┌──────────────────────────────────────────┐
-│  AI-Powered Campaign Discovery           │
-│  AI: "Congratulations! You're approved.  │
-│       Based on your profile, here are    │
-│       3 campaigns I think you'll love:"  │
-│                                          │
-│  [AgriTech Startup] - Your sector match  │
-│  [HealthTech Co] - Trending now          │
-│  [FinTech Firm] - Similar investors      │
-│                                          │
-│  AI: "Want to explore more? I can help   │
-│       you find the perfect investment."  │
+│  Select Offering                         │
+│  - Browse Explore Page (AI-recommended)  │
+│  - Campaign detail with risk disclosures │
+│  - AI: personalized recommendations      │
 └────────┬─────────────────────────────────┘
          │
          ↓
-┌──────────────────┐
-│  Browse          │
-│  Opportunities   │
-│  (With AI        │
-│   Recommendations)│
-└──────────────────┘
+┌──────────────────────────────────────────┐
+│  Fund Investment                         │
+│  - Link payment method:                  │
+│    • Credit/debit card                   │
+│    • ACH bank transfer                   │
+│    • Wire transfer                       │
+│    • M-Pesa (Kenya)                      │
+│  - Enter investment amount               │
+│  - AI validates against legal limits     │
+└────────┬─────────────────────────────────┘
+         │
+         ↓
+┌──────────────────────────────────────────┐
+│  Legal Signature                         │
+│  - Digitally sign Subscription Agreement │
+│  - Acknowledge SEC risk disclosures      │
+│  - IP address & user agent recorded      │
+│  - Agreement version tracked             │
+└────────┬─────────────────────────────────┘
+         │
+         ↓
+┌──────────────────────────────────────────┐
+│  Confirmation & Ownership                │
+│  - Investment enters cooling-off period  │
+│  - Once cleared & round closes:          │
+│    • Countersigned agreement issued      │
+│    • Proof of ownership delivered        │
+│    • Investment certificate generated    │
+└──────────────────────────────────────────┘
 ```
+
+**API Endpoints (Phase 4):**
+- `POST /api/v1/investments` — Create investment
+- `POST /api/v1/investments/{id}/agreement/sign` — Sign subscription agreement
+- `GET /api/v1/investments/{id}/agreement` — View agreement
+- `PUT /api/v1/investments/{id}/agreement/{agreementId}/countersign` — Admin countersign
 
 **AI Assistance Throughout:**
 - Chatbot available on every screen (bottom right)
 - Contextual help tooltips powered by AI
 - Error prevention (not just correction)
-- Progress saved automatically
-- Can resume anytime
-- Multi-language support (AI translates)
+- Progress saved automatically — can resume anytime
+- Multi-language support (AI translates: English, Swahili, French)
 
 **Timeline:**
 - Without AI: 20-30 minutes user effort
@@ -1639,9 +1695,21 @@ POST /api/v1/webhooks/kcb/payment-confirmed
 
 **Human Touchpoints:**
 - Final KYC approval (if AI confidence < 95%)
+- Non-individual account review (Joint, Trust, Company, IRA)
+- Accredited investor verification
 - Complex customer support issues
-- Account disputes
-- All AI decisions can be appealed to humans
+- Account disputes — all AI decisions can be appealed to humans
+
+**Onboarding Status Tracking:**
+The `GET /api/v1/investor/onboarding/status` endpoint returns the investor's current phase and next action:
+
+| Phase | Status Check | Next Step |
+|-------|-------------|-----------|
+| ACCOUNT_CREATION | Email not verified | "Verify your email address" |
+| ACCOUNT_CREATION | Profile incomplete | "Complete your profile (DOB, gender, country)" |
+| INVESTMENT_ACCOUNT | No open account | "Open an investment account" |
+| IDENTITY_VERIFICATION | KYC not approved | "Upload identity documents" / "Verification in progress" |
+| READY_TO_INVEST | All complete | "Browse campaigns and invest" |
 
 ### 10.2 Investment Flow (AI-Enhanced)
 
@@ -1881,51 +1949,136 @@ Receive Confirmation Email/SMS
 - Audio-to-text for queries
 - Step-by-step guidance mode
 
-### 10.3 Issuer Campaign Creation Flow
+### 10.3 Issuer/Founder Onboarding & Campaign Creation Flow
+
+Onboarding startup founders onto Keza to raise capital is a structured, full-service process. Keza provides a dedicated team that helps with regulatory filing, campaign page creation, and marketing strategies. The typical timeline is **4-6 weeks** for Regulation Crowdfunding (Reg CF) and longer for Regulation A+.
 
 ```
-Register as Issuer → Company Verification → 
-Campaign Application → Document Upload → 
-144-Point Due Diligence → Campaign Setup → 
-Marketing Review → Campaign Approval → 
-Campaign Goes Live → Investor Relations → 
-Campaign Close → Fund Disbursement
+Initial Application → Eligibility Review → Account Manager Assignment →
+Legal & Compliance (Form C / Reg A+) → Due Diligence & Securities Structure →
+Campaign Page Construction → Testing the Waters (Soft Launch) →
+Campaign Goes Live → Investor Management → Rolling Closes → Fund Disbursement
 ```
 
-**Detailed Steps:**
+#### Phase 1: Initial Application & Eligibility Review (Week 1)
 
-1. **Company Registration**
-    - Business details
-    - Registration documents
-    - Management team info
-    - Financial statements
+1. **Submit Application**
+    - Founders submit a business profile to Keza
+    - Company details, industry, stage, and funding goals
 
-2. **Due Diligence Submission**
-    - Complete 144-point checklist
-    - Upload supporting documents
+2. **Eligibility Check**
+    - Keza's team reviews the company against SEC/CMA requirements and platform standards:
+      - **Revenue & Traction:** Customer engagement, growth metrics, MRR/ARR
+      - **Team & Experience:** Founder background, team strength, domain expertise
+      - **Offering Terms:** Type of security offered (SAFE, equity, convertible note) and proposed valuation
+    - Companies that don't meet minimum criteria receive feedback on what to improve
+
+3. **Account Manager Assignment**
+    - Once accepted, a dedicated account manager is assigned
+    - Account manager guides the founder through the entire process
+    - Kick-off call to align on timeline, goals, and campaign strategy
+
+#### Phase 2: Legal & Compliance (Weeks 1-3)
+
+Keza's compliance team handles the regulatory paperwork to ensure SEC/CMA and FINRA compliance.
+
+4. **Regulatory Filing**
+    - **Regulation Crowdfunding (Reg CF):** Form C filing for raises up to $5M (KES 650M). Contains essential company information, financials, and legal terms
+    - **Regulation A+ (Reg A+):** For raises up to $75M. More comprehensive regulatory process, suitable for established companies
+    - All filings prepared and managed by Keza's compliance team
+
+5. **Due Diligence**
+    - Complete 144-point inspection checklist
+    - "Bad actor" screening and background checks on founders
     - Third-party verifications
     - Platform review (14-21 days)
 
-3. **Campaign Builder**
-    - Set funding goal (min/max)
-    - Choose investment type
-    - Set valuation/pricing
-    - Create pitch deck
-    - Record video pitch
-    - Write company story
-    - Define perks (optional)
+6. **Securities Structure**
+    - Setting the company valuation (pre-money and post-money)
+    - Choosing security type:
+      - **SAFE (Simple Agreement for Future Equity):** Most common for early-stage
+      - **Convertible Notes:** Debt that converts to equity at next round
+      - **Equity:** Direct share ownership
+      - **Revenue Share:** Returns based on company revenue
+    - Defining investment terms (minimum, maximum, cap, discount rate)
 
-4. **Marketing Setup**
-    - Email list import
-    - Social media links
-    - PR materials
-    - Launch strategy
+#### Phase 3: Campaign Page Construction (Weeks 2-4)
 
-5. **Campaign Management**
-    - Monitor investments
-    - Answer investor questions
-    - Post updates
-    - Analytics dashboard
+7. **Campaign Strategist Assignment**
+    - Founders work with a dedicated campaign strategist to design the campaign page
+    - Strategy alignment on messaging, target audience, and positioning
+
+8. **Pitch & Narrative**
+    - Creating a compelling, high-quality pitch video (2-3 minutes recommended)
+    - Writing the company story with problem/solution framework
+    - Business model explanation and market opportunity
+    - Financial projections and use of funds breakdown
+    - Competitive landscape and unique advantages
+
+9. **Campaign Builder (6-Step Wizard)**
+    - **Step 1:** Company information (name, logo, industry, registration, team)
+    - **Step 2:** Offering details (type, funding goal, terms, valuation, share price)
+    - **Step 3:** Pitch content (video, story, financials, risk factors)
+    - **Step 4:** Financial projections and use of funds
+    - **Step 5:** Documents upload (business plan, financial statements, pitch deck, legal docs)
+    - **Step 6:** Review and submit for approval
+
+10. **Perks and Rewards**
+    - Campaigns can offer investor perks to encourage investment
+    - Early bird bonuses (better terms for early investors)
+    - Product/service discounts
+    - Referral incentives
+    - Keza's team helps structure compelling perk tiers
+
+#### Phase 4: Testing the Waters & Pre-Launch (Week 4-5)
+
+11. **Soft Launch (Testing the Waters)**
+    - Before going live, companies can "Test the Waters" to gauge investor interest
+    - Pre-registration page to collect investor intent
+    - Measure demand before committing to full campaign launch
+
+12. **Marketing Strategy**
+    - Keza provides tools and insights for pre-launch marketing:
+      - Email list import and campaign email templates
+      - Social media graphics templates and shareable links
+      - Press release template
+      - Referral tracking links
+    - Launch timing optimization based on platform data
+    - CampaignPro AI provides marketing recommendations
+
+#### Phase 5: Launch & Campaign Management (Weeks 5-6+)
+
+13. **Campaign Goes Live**
+    - Campaign published on the Keza platform
+    - Featured placement for qualifying campaigns
+    - Automated investor notifications for watchlisted campaigns
+
+14. **Investor Management**
+    - Founders use the Keza dashboard to:
+      - Track investments, conversion rates, and investor data
+      - Answer investor questions via Q&A feature
+      - Post campaign updates to keep investors engaged
+      - Monitor analytics (page views, investment velocity, traffic sources)
+    - CampaignPro AI provides ongoing optimization suggestions
+
+15. **Rolling Closes & Fund Disbursement**
+    - Keza facilitates "rolling closes," allowing founders to access funds as they are raised rather than waiting until the end
+    - All investments held in KCB escrow until minimum target reached
+    - Automatic refund if minimum target not met
+    - Fund release to issuer account upon target achievement
+
+#### Onboarding Paths by Regulation Type
+
+| Aspect | Regulation CF | Regulation A+ |
+|--------|--------------|---------------|
+| **Maximum Raise** | $5M/year (KES 650M) | $75M (KES 9.75B) |
+| **Setup Timeline** | 4-6 weeks | 8-12 weeks |
+| **Upfront Costs** | Lower | Higher (legal, audit) |
+| **Financial Requirements** | Review or audit (depending on amount) | Audited financials required |
+| **Ongoing Reporting** | Annual report (Form C-AR) | Semi-annual reports |
+| **Investor Limits** | Non-accredited: income/net worth limits | No investor limits |
+| **Best For** | Early-stage startups, seed rounds | Growth-stage companies, larger raises |
+| **SEC Filing** | Form C | Form 1-A |
 
 ---
 

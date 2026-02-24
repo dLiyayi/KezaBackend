@@ -18,4 +18,6 @@ public interface InvestmentRepository extends JpaRepository<Investment, UUID>, J
     Page<Investment> findByInvestorIdOrderByCreatedAtDesc(UUID investorId, Pageable pageable);
 
     boolean existsByInvestorIdAndCampaignId(UUID investorId, UUID campaignId);
+
+    Page<Investment> findByCampaignIdOrderByCreatedAtDesc(UUID campaignId, Pageable pageable);
 }

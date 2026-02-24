@@ -37,7 +37,16 @@ public class AdminUserUseCase {
         );
 
         List<AdminUserResponse> content = page.getContent().stream()
-                .map(this::mapToAdminUserResponse)
+                .map(data -> {
+                    AdminUserResponse response = mapToAdminUserResponse(data);
+                    UUID userId = (UUID) data.get("id");
+                    List<Map<String, Object>> roles = adminUserRepository.findUserRoles(userId);
+                    Set<String> roleNames = roles.stream()
+                            .map(r -> (String) r.get("name"))
+                            .collect(Collectors.toSet());
+                    response.setRoles(roleNames);
+                    return response;
+                })
                 .toList();
 
         return PagedResponse.<AdminUserResponse>builder()

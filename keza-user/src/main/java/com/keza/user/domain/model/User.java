@@ -90,6 +90,18 @@ public class User extends SoftDeletableEntity {
     @Column(name = "annual_income", precision = 15, scale = 2)
     private BigDecimal annualIncome;
 
+    @Column(length = 20)
+    private String gender;
+
+    @Column(name = "country_of_residence", length = 100)
+    private String countryOfResidence;
+
+    @Column(length = 100)
+    private String citizenship;
+
+    @Column(name = "net_worth", precision = 15, scale = 2)
+    private BigDecimal netWorth;
+
     @ManyToMany(fetch = FetchType.EAGER)
     @JoinTable(
             name = "user_roles",

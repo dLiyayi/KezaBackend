@@ -106,6 +106,20 @@ public class CampaignController {
         return ResponseEntity.ok(ApiResponse.success(response, "Campaign submitted for review"));
     }
 
+    @GetMapping("/my-campaigns")
+    @PreAuthorize("hasRole('ISSUER') or hasRole('ADMIN')")
+    public ResponseEntity<ApiResponse<PagedResponse<CampaignResponse>>> getIssuerCampaigns(
+            Authentication authentication,
+            @RequestParam(required = false) CampaignStatus status,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        UUID issuerId = UUID.fromString(authentication.getName());
+        size = Math.min(size, 100);
+        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
+        Page<CampaignResponse> campaigns = campaignUseCase.getIssuerCampaigns(issuerId, status, pageable);
+        return ResponseEntity.ok(ApiResponse.success(PagedResponse.from(campaigns)));
+    }
+
     @GetMapping("/featured")
     public ResponseEntity<ApiResponse<List<CampaignResponse>>> getFeaturedCampaigns(
             @RequestParam(defaultValue = "6") int limit) {

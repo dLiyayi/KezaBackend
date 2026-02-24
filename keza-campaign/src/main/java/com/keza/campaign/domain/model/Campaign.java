@@ -101,6 +101,10 @@ public class Campaign extends SoftDeletableEntity {
     @Builder.Default
     private Integer wizardStep = 1;
 
+    @Column(name = "testing_the_waters", nullable = false)
+    @Builder.Default
+    private boolean testingTheWaters = false;
+
     @Column(name = "start_date")
     private Instant startDate;
 

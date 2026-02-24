@@ -41,6 +41,10 @@ public class UserProfileUseCase {
         if (request.getNationalId() != null) user.setNationalId(request.getNationalId());
         if (request.getKraPin() != null) user.setKraPin(request.getKraPin());
         if (request.getAnnualIncome() != null) user.setAnnualIncome(request.getAnnualIncome());
+        if (request.getGender() != null) user.setGender(request.getGender());
+        if (request.getCountryOfResidence() != null) user.setCountryOfResidence(request.getCountryOfResidence());
+        if (request.getCitizenship() != null) user.setCitizenship(request.getCitizenship());
+        if (request.getNetWorth() != null) user.setNetWorth(request.getNetWorth());
 
         user = userRepository.save(user);
         return mapToResponse(user);
