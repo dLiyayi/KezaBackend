@@ -1,5 +1,6 @@
 package com.keza.user.application.usecase;
 
+import com.keza.common.enums.UserType;
 import com.keza.common.exception.BusinessRuleException;
 import com.keza.common.exception.DuplicateResourceException;
 import com.keza.common.exception.ResourceNotFoundException;
@@ -61,6 +62,7 @@ public class AuthUseCase {
                 .passwordHash(passwordEncoder.encode(request.getPassword()))
                 .firstName(request.getFirstName())
                 .lastName(request.getLastName())
+                .userType(UserType.valueOf(roleName))
                 .roles(Set.of(role))
                 .build();
 
