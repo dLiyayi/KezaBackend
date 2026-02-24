@@ -45,6 +45,9 @@ public class NotificationEventListener {
                 case "INVESTMENT_CONFIRMED" -> handleInvestmentConfirmed(event);
                 case "PAYMENT_RECEIVED" -> handlePaymentReceived(event);
                 case "CAMPAIGN_FUNDED" -> handleCampaignFunded(event);
+                case "INVESTMENT_CANCELLED" -> handleGenericEvent(event);
+                case "CAMPAIGN_APPROVED" -> handleGenericEvent(event);
+                case "CAMPAIGN_REJECTED" -> handleGenericEvent(event);
                 default -> {
                     log.warn("Unknown notification event type: {}", eventType);
                     handleGenericEvent(event);
