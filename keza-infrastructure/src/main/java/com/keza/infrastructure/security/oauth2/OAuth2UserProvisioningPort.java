@@ -11,10 +11,13 @@ public interface OAuth2UserProvisioningPort {
      * Finds an existing user by email, or auto-provisions a new user with the
      * INVESTOR role, a verified email flag, and a random password hash.
      *
-     * @param email     the user's email from the OAuth2 provider
-     * @param firstName the user's first name from the OAuth2 provider
-     * @param lastName  the user's last name from the OAuth2 provider
+     * @param email      the user's email from the OAuth2 provider
+     * @param firstName  the user's first name from the OAuth2 provider
+     * @param lastName   the user's last name from the OAuth2 provider
+     * @param provider   the OAuth2 provider name (e.g. "google", "facebook", "apple", "kcb")
+     * @param providerId the user's unique ID at the provider (sub/id claim), may be null
      * @return OAuth2UserInfo containing the user's id, email, and role names
      */
-    OAuth2UserInfo provisionOrGetUser(String email, String firstName, String lastName);
+    OAuth2UserInfo provisionOrGetUser(String email, String firstName, String lastName,
+                                      String provider, String providerId);
 }

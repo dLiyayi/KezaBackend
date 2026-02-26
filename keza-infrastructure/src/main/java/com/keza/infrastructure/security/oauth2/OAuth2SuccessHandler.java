@@ -6,6 +6,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
 import org.springframework.stereotype.Component;
@@ -17,7 +18,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.Map;
 
 /**
- * Handles successful OAuth2 authentication (e.g. KCB login).
+ * Handles successful OAuth2 authentication (e.g. KCB, Google, Facebook, Apple login).
  * <p>
  * On success this handler:
  * <ol>
@@ -52,9 +53,31 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
         OAuth2User oAuth2User = (OAuth2User) authentication.getPrincipal();
         Map<String, Object> attributes = oAuth2User.getAttributes();
 
+        // Determine provider name from registration ID
+        String provider = "oauth2";
+        String providerId = null;
+        if (authentication instanceof OAuth2AuthenticationToken oauthToken) {
+            provider = oauthToken.getAuthorizedClientRegistrationId();
+            providerId = extractAttribute(attributes, "sub", "id");
+        }
+
         String email = extractAttribute(attributes, "email");
         String firstName = extractAttribute(attributes, "given_name", "first_name", "firstName");
         String lastName = extractAttribute(attributes, "family_name", "last_name", "lastName");
+
+        // Facebook returns a single "name" field; split it when given_name/family_name are absent
+        if ((firstName == null || firstName.isBlank()) && (lastName == null || lastName.isBlank())) {
+            String fullName = extractAttribute(attributes, "name");
+            if (fullName != null && !fullName.isBlank()) {
+                int spaceIdx = fullName.indexOf(' ');
+                if (spaceIdx > 0) {
+                    firstName = fullName.substring(0, spaceIdx);
+                    lastName = fullName.substring(spaceIdx + 1);
+                } else {
+                    firstName = fullName;
+                }
+            }
+        }
 
         if (email == null || email.isBlank()) {
             log.error("OAuth2 login failed: email attribute is missing from provider response");
@@ -75,7 +98,8 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
         }
 
         try {
-            OAuth2UserInfo userInfo = userProvisioningPort.provisionOrGetUser(email, firstName, lastName);
+            OAuth2UserInfo userInfo = userProvisioningPort.provisionOrGetUser(
+                    email, firstName, lastName, provider, providerId);
 
             String accessToken = tokenGenerationPort.generateAccessToken(
                     userInfo.userId(), userInfo.email(), userInfo.roles());
@@ -90,7 +114,7 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
                     .build()
                     .toUriString();
 
-            log.info("OAuth2 login successful for user: {} ({})", email, userInfo.userId());
+            log.info("OAuth2 login successful for user: {} ({}) via {}", email, userInfo.userId(), provider);
             response.sendRedirect(redirectUrl);
 
         } catch (Exception e) {

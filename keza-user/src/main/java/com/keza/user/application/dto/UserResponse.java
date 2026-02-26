@@ -26,6 +26,7 @@ public class UserResponse {
     private boolean phoneVerified;
     private String profileImageUrl;
     private String bio;
+    private String authProvider;
     private Set<String> roles;
     private Instant createdAt;
 }

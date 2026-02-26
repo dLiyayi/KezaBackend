@@ -10,7 +10,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.security.core.Authentication;
+import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 
 import java.util.Map;
@@ -40,7 +40,7 @@ class OAuth2SuccessHandlerTest {
     private HttpServletResponse response;
 
     @Mock
-    private Authentication authentication;
+    private OAuth2AuthenticationToken authentication;
 
     @Mock
     private OAuth2User oAuth2User;
@@ -51,6 +51,7 @@ class OAuth2SuccessHandlerTest {
     void setUp() {
         handler = new OAuth2SuccessHandler(userProvisioningPort, tokenGenerationPort, FRONTEND_CALLBACK_URL);
         when(authentication.getPrincipal()).thenReturn(oAuth2User);
+        when(authentication.getAuthorizedClientRegistrationId()).thenReturn("google");
     }
 
     @Nested
@@ -64,12 +65,13 @@ class OAuth2SuccessHandlerTest {
             Map<String, Object> attributes = Map.of(
                     "email", "jane@keza.com",
                     "given_name", "Jane",
-                    "family_name", "Doe"
+                    "family_name", "Doe",
+                    "sub", "google-123"
             );
             when(oAuth2User.getAttributes()).thenReturn(attributes);
 
             OAuth2UserInfo userInfo = new OAuth2UserInfo(userId, "jane@keza.com", Set.of("INVESTOR"));
-            when(userProvisioningPort.provisionOrGetUser("jane@keza.com", "Jane", "Doe"))
+            when(userProvisioningPort.provisionOrGetUser("jane@keza.com", "Jane", "Doe", "google", "google-123"))
                     .thenReturn(userInfo);
             when(tokenGenerationPort.generateAccessToken(userId, "jane@keza.com", Set.of("INVESTOR")))
                     .thenReturn("access-token-123");
@@ -98,12 +100,13 @@ class OAuth2SuccessHandlerTest {
             Map<String, Object> attributes = Map.of(
                     "email", "new@keza.com",
                     "given_name", "New",
-                    "family_name", "User"
+                    "family_name", "User",
+                    "sub", "google-456"
             );
             when(oAuth2User.getAttributes()).thenReturn(attributes);
 
             OAuth2UserInfo userInfo = new OAuth2UserInfo(userId, "new@keza.com", Set.of("INVESTOR"));
-            when(userProvisioningPort.provisionOrGetUser("new@keza.com", "New", "User"))
+            when(userProvisioningPort.provisionOrGetUser("new@keza.com", "New", "User", "google", "google-456"))
                     .thenReturn(userInfo);
             when(tokenGenerationPort.generateAccessToken(eq(userId), eq("new@keza.com"), anyCollection()))
                     .thenReturn("new-access-token");
@@ -114,7 +117,7 @@ class OAuth2SuccessHandlerTest {
 
             handler.onAuthenticationSuccess(request, response, authentication);
 
-            verify(userProvisioningPort).provisionOrGetUser("new@keza.com", "New", "User");
+            verify(userProvisioningPort).provisionOrGetUser("new@keza.com", "New", "User", "google", "google-456");
             verify(response).sendRedirect(contains("access_token=new-access-token"));
         }
 
@@ -125,12 +128,13 @@ class OAuth2SuccessHandlerTest {
             Map<String, Object> attributes = Map.of(
                     "email", "alt@keza.com",
                     "first_name", "Alt",
-                    "last_name", "User"
+                    "last_name", "User",
+                    "sub", "google-789"
             );
             when(oAuth2User.getAttributes()).thenReturn(attributes);
 
             OAuth2UserInfo userInfo = new OAuth2UserInfo(userId, "alt@keza.com", Set.of("INVESTOR"));
-            when(userProvisioningPort.provisionOrGetUser("alt@keza.com", "Alt", "User"))
+            when(userProvisioningPort.provisionOrGetUser("alt@keza.com", "Alt", "User", "google", "google-789"))
                     .thenReturn(userInfo);
             when(tokenGenerationPort.generateAccessToken(eq(userId), eq("alt@keza.com"), anyCollection()))
                     .thenReturn("token");
@@ -139,7 +143,32 @@ class OAuth2SuccessHandlerTest {
 
             handler.onAuthenticationSuccess(request, response, authentication);
 
-            verify(userProvisioningPort).provisionOrGetUser("alt@keza.com", "Alt", "User");
+            verify(userProvisioningPort).provisionOrGetUser("alt@keza.com", "Alt", "User", "google", "google-789");
+        }
+
+        @Test
+        @DisplayName("should split Facebook name attribute when given_name/family_name are absent")
+        void shouldSplitFacebookNameAttribute() throws Exception {
+            UUID userId = UUID.randomUUID();
+            when(authentication.getAuthorizedClientRegistrationId()).thenReturn("facebook");
+            Map<String, Object> attributes = Map.of(
+                    "email", "fb@keza.com",
+                    "name", "Jane Doe",
+                    "id", "fb-123"
+            );
+            when(oAuth2User.getAttributes()).thenReturn(attributes);
+
+            OAuth2UserInfo userInfo = new OAuth2UserInfo(userId, "fb@keza.com", Set.of("INVESTOR"));
+            when(userProvisioningPort.provisionOrGetUser("fb@keza.com", "Jane", "Doe", "facebook", "fb-123"))
+                    .thenReturn(userInfo);
+            when(tokenGenerationPort.generateAccessToken(eq(userId), eq("fb@keza.com"), anyCollection()))
+                    .thenReturn("token");
+            when(tokenGenerationPort.generateRefreshToken(userId)).thenReturn("refresh");
+            when(tokenGenerationPort.getAccessTokenExpiration()).thenReturn(900000L);
+
+            handler.onAuthenticationSuccess(request, response, authentication);
+
+            verify(userProvisioningPort).provisionOrGetUser("fb@keza.com", "Jane", "Doe", "facebook", "fb-123");
         }
     }
 
@@ -176,7 +205,7 @@ class OAuth2SuccessHandlerTest {
             when(oAuth2User.getAttributes()).thenReturn(attributes);
 
             OAuth2UserInfo userInfo = new OAuth2UserInfo(userId, "noname@keza.com", Set.of("INVESTOR"));
-            when(userProvisioningPort.provisionOrGetUser("noname@keza.com", "User", ""))
+            when(userProvisioningPort.provisionOrGetUser(eq("noname@keza.com"), eq("User"), eq(""), eq("google"), isNull()))
                     .thenReturn(userInfo);
             when(tokenGenerationPort.generateAccessToken(eq(userId), eq("noname@keza.com"), anyCollection()))
                     .thenReturn("token");
@@ -185,7 +214,7 @@ class OAuth2SuccessHandlerTest {
 
             handler.onAuthenticationSuccess(request, response, authentication);
 
-            verify(userProvisioningPort).provisionOrGetUser("noname@keza.com", "User", "");
+            verify(userProvisioningPort).provisionOrGetUser(eq("noname@keza.com"), eq("User"), eq(""), eq("google"), isNull());
         }
 
         @Test
@@ -216,7 +245,7 @@ class OAuth2SuccessHandlerTest {
                     "family_name", "User"
             );
             when(oAuth2User.getAttributes()).thenReturn(attributes);
-            when(userProvisioningPort.provisionOrGetUser(anyString(), anyString(), anyString()))
+            when(userProvisioningPort.provisionOrGetUser(anyString(), anyString(), anyString(), anyString(), any()))
                     .thenThrow(new RuntimeException("Database connection failed"));
 
             handler.onAuthenticationSuccess(request, response, authentication);
@@ -242,7 +271,7 @@ class OAuth2SuccessHandlerTest {
             when(oAuth2User.getAttributes()).thenReturn(attributes);
 
             OAuth2UserInfo userInfo = new OAuth2UserInfo(userId, "tokenfail@keza.com", Set.of("INVESTOR"));
-            when(userProvisioningPort.provisionOrGetUser(anyString(), anyString(), anyString()))
+            when(userProvisioningPort.provisionOrGetUser(anyString(), anyString(), anyString(), anyString(), any()))
                     .thenReturn(userInfo);
             when(tokenGenerationPort.generateAccessToken(any(), anyString(), anyCollection()))
                     .thenThrow(new RuntimeException("Key error"));

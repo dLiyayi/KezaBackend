@@ -52,7 +52,7 @@ keza:
   ai:
     enabled: false
   oauth2:
-    enabled: false  # Set to true when KCB OAuth2 credentials are configured
+    enabled: false  # Set to true when OAuth2 credentials are configured
     kcb:
       client-id: ${KCB_OAUTH2_CLIENT_ID:}
       client-secret: ${KCB_OAUTH2_CLIENT_SECRET:}
@@ -60,6 +60,17 @@ keza:
       token-uri: ${KCB_OAUTH2_TOKEN_URI:https://sandbox.kcbbankgroup.com/oauth2/token}
       user-info-uri: ${KCB_OAUTH2_USERINFO_URI:https://sandbox.kcbbankgroup.com/oauth2/userinfo}
       redirect-uri: ${KCB_OAUTH2_REDIRECT_URI:http://localhost:8080/login/oauth2/code/kcb}
+    google:
+      client-id: ${GOOGLE_OAUTH2_CLIENT_ID:}
+      client-secret: ${GOOGLE_OAUTH2_CLIENT_SECRET:}
+    facebook:
+      client-id: ${FACEBOOK_OAUTH2_CLIENT_ID:}
+      client-secret: ${FACEBOOK_OAUTH2_CLIENT_SECRET:}
+    apple:
+      client-id: ${APPLE_OAUTH2_CLIENT_ID:}
+      team-id: ${APPLE_TEAM_ID:}
+      key-id: ${APPLE_KEY_ID:}
+      private-key-file: ${APPLE_PRIVATE_KEY_FILE:}
     frontend-callback-url: ${OAUTH2_FRONTEND_CALLBACK:http://localhost:3000/auth/callback}
   jwt:
     secret: ${JWT_SECRET:keza-dev-secret-key-change-in-production-must-be-at-least-256-bits-long}

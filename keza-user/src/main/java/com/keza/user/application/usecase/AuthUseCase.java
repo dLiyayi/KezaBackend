@@ -223,6 +223,7 @@ public class AuthUseCase {
                 .phoneVerified(user.isPhoneVerified())
                 .profileImageUrl(user.getProfileImageUrl())
                 .bio(user.getBio())
+                .authProvider(user.getAuthProvider())
                 .roles(roles)
                 .createdAt(user.getCreatedAt())
                 .build();

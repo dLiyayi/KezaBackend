@@ -102,6 +102,13 @@ public class User extends SoftDeletableEntity {
     @Column(name = "net_worth", precision = 15, scale = 2)
     private BigDecimal netWorth;
 
+    @Column(name = "auth_provider", nullable = false, length = 20)
+    @Builder.Default
+    private String authProvider = "LOCAL";
+
+    @Column(name = "auth_provider_id")
+    private String authProviderId;
+
     @ManyToMany(fetch = FetchType.EAGER)
     @JoinTable(
             name = "user_roles",
